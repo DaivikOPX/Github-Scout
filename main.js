@@ -2,6 +2,7 @@
  * main.js — App entry with Ollama/Groq provider switching, bookmarks panel
  */
 import './style.css';
+import DOMPurify from 'dompurify';
 import { searchRepos, enrichRepos, fetchRepoTree, fetchRepoIssues, fetchRepoFileContent } from './src/github.js';
 import { analyzeRepos, checkOllamaStatus, generateDeepDive, translateIdeaToKeywords, chatAboutRepo, DEFAULT_MODELS, explainFileCode, explainDependency, explainFileChunk, summarizeFullFile } from './src/ai.js';
 import { renderResults, renderLoadingState, updateLoadingMessage, updateProgress, renderError, showToast, scrollToResults } from './src/ui.js';
@@ -1845,47 +1846,13 @@ function esc(t) {
 }
 
 function sanitizeHTML(htmlString) {
-  // Simple custom browser sanitizer
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, 'text/html');
-  sanitizeNode(doc.body);
-  return doc.body.innerHTML;
-}
-
-function sanitizeNode(node) {
-  // Safe tag list
-  const allowedTags = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'pre', 'code', 'blockquote', 'a', 'strong', 'em', 'i', 'b', 'br', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
-  
-  let child = node.firstChild;
-  while (child) {
-    const next = child.nextSibling;
-    if (child.nodeType === Node.ELEMENT_NODE) {
-      const tag = child.tagName.toLowerCase();
-      if (!allowedTags.includes(tag)) {
-        node.removeChild(child);
-      } else {
-        // Strip out onload, onclick, javascript: links, and styling overrides
-        const attrs = Array.from(child.attributes);
-        for (const attr of attrs) {
-          const name = attr.name.toLowerCase();
-          if (
-            name.startsWith('on') || 
-            name === 'style' || 
-            name === 'color' || 
-            name === 'bgcolor' || 
-            name === 'background' || 
-            (name === 'href' && attr.value.toLowerCase().startsWith('javascript:'))
-          ) {
-            child.removeAttribute(attr.name);
-          }
-        }
-        sanitizeNode(child);
-      }
-    } else if (child.nodeType === Node.COMMENT_NODE) {
-      node.removeChild(child);
-    }
-    child = next;
-  }
+  // Use industry-standard DOMPurify to strip XSS vectors and clean HTML
+  return DOMPurify.sanitize(htmlString, {
+    ALLOWED_TAGS: ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'pre', 'code', 'blockquote', 'a', 'strong', 'em', 'i', 'b', 'br', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+    ALLOWED_ATTR: ['href', 'title', 'class', 'target'], // Excluding 'style', 'color', etc. to prevent layout overrides
+    FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed'],
+    FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover']
+  });
 }
 
 function initNavbarScroll() {
