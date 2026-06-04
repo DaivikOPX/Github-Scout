@@ -308,3 +308,126 @@ export function parseManifestDependencies(fileName, content) {
   }
   return deps;
 }
+
+/**
+ * Parses user idea descriptions (1-liners, paragraphs, or essays), filters out noise,
+ * and extracts/ranks the most significant technical keywords and multi-word phrases.
+ * Returns a flat array of the top 4-5 key terms for GitHub search.
+ */
+export function extractSignificantKeywords(text) {
+  if (!text) return [];
+
+  const STOP_WORDS = new Set([
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
+    'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
+    'could', 'couldnt', 'did', 'didnt', 'do', 'does', 'doesnt', 'doing', 'dont', 'down', 'during', 'each', 'few',
+    'for', 'from', 'further', 'had', 'hadnt', 'has', 'hasnt', 'have', 'havent', 'having', 'he', 'hed', 'hell',
+    'hes', 'her', 'here', 'heres', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'hows', 'i', 'id', 'ill',
+    'im', 'ive', 'if', 'in', 'into', 'is', 'isnt', 'it', 'its', 'itself', 'lets', 'me', 'more', 'most', 'mustnt',
+    'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+    'ourselves', 'out', 'over', 'own', 'same', 'shant', 'she', 'shed', 'shell', 'shes', 'should', 'shouldnt', 'so',
+    'some', 'such', 'than', 'that', 'thats', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
+    'theres', 'these', 'they', 'theyd', 'theyll', 'theyre', 'theyve', 'this', 'those', 'through', 'to', 'too',
+    'under', 'until', 'up', 'very', 'was', 'wasnt', 'we', 'wed', 'well', 'were', 'werent', 'what', 'whats',
+    'when', 'whens', 'where', 'wheres', 'which', 'while', 'who', 'whos', 'whom', 'why', 'whys', 'with', 'wont',
+    'would', 'wouldnt', 'you', 'youd', 'youll', 'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves',
+    'want', 'wants', 'build', 'building', 'make', 'making', 'create', 'creating', 'search', 'searching',
+    'find', 'finding', 'write', 'writing', 'code', 'program', 'project', 'repo', 'repos', 'repository',
+    'repositories', 'app', 'apps', 'application', 'applications', 'software', 'tool', 'tools', 'library',
+    'libraries', 'system', 'systems', 'developer', 'developers', 'git', 'github', 'idea', 'ideas', 'essay',
+    'paragraph', 'text', 'typed', 'show', 'showing', 'shows', 'look', 'looking', 'please', 'help', 'need',
+    'needs', 'implement', 'implementation', 'design', 'designing', 'use', 'using', 'uses', 'some', 'simple',
+    'complex', 'advanced', 'beginner', 'standard', 'basic', 'custom', 'different', 'new', 'old', 'first',
+    'second', 'third', 'thing', 'things', 'good', 'better', 'best', 'example', 'examples', 'support', 'language', 'languages'
+  ]);
+
+  const HIGH_PRIORITY_TECH_WORDS = new Set([
+    'rust', 'python', 'javascript', 'typescript', 'golang', 'cpp', 'swift', 'kotlin', 'java', 'ruby', 'php', 'html',
+    'css', 'solidity', 'sql', 'react', 'vue', 'angular', 'svelte', 'django', 'flask', 'fastapi', 'rails', 'spring',
+    'express', 'nextjs', 'tensorflow', 'pytorch', 'keras', 'opencv', 'numpy', 'pandas', 'flutter', 'ionic', 'cordova',
+    'electron', 'tailwind', 'bootstrap', 'bios', 'uefi', 'firmware', 'coreboot', 'database', 'devops', 'docker',
+    'kubernetes', 'blockchain', 'ethereum', 'smart-contract', 'api', 'graphql', 'oauth', 'grpc', 'websocket',
+    'serverless', 'microservices', 'compiler', 'interpreter', 'emulator', 'parser', 'renderer', 'router', 'redux',
+    'mobx', 'prisma', 'sequelize', 'mongoose', 'redis', 'postgresql', 'mysql', 'mongodb', 'sqlite', 'sqlite3',
+    'cassandra', 'elasticsearch', 'rabbitmq', 'kafka', 'cybersecurity', 'cryptography', 'animation', 'physics',
+    'simulation', 'graphics', 'canvas', 'webgl', 'audio', 'video', 'midi', 'synth', 'robot', 'robotics', 'bluetooth',
+    'wifi', 'sensor', 'camera', 'lidar', 'radar', 'llvm', 'deepcheck', 'pose', 'estimation', 'vision', 'intelligence',
+    'nlp', 'llm', 'gpt', 'bert', 'transformer', 'neural', 'network', 'ai'
+  ]);
+
+  const TECHNICAL_PHRASES = [
+    'react native', 'pose estimation', 'tensorflow', 'tensor flow', 'fitness tracker',
+    'computer vision', 'machine learning', 'deep learning', 'natural language', 'neural network',
+    'data science', 'web development', 'time series', 'rest api', 'google cloud', 'amazon web',
+    'docker container', 'kubernetes cluster', 'smart contract', 'command line', 'audio processing',
+    'image processing', 'video processing', 'bios extension', 'game dev', 'game engine',
+    'browser extension', 'mobile app', 'desktop app'
+  ];
+
+  let cleanedText = text.toLowerCase();
+  const foundPhrases = [];
+
+  // Match and extract known technical phrases first
+  for (const phrase of TECHNICAL_PHRASES) {
+    if (cleanedText.includes(phrase)) {
+      // Add the hyphenated version to preserve phrase structure in search
+      const hyphenated = phrase.replace(/\s+/g, '-');
+      if (!foundPhrases.includes(hyphenated)) {
+        foundPhrases.push(hyphenated);
+      }
+      // Remove it from the text to avoid double extraction of parts
+      cleanedText = cleanedText.split(phrase).join(' ');
+    }
+  }
+
+  // Clean remaining text of non-alphanumeric (keep hyphens inside words)
+  const words = cleanedText
+    .replace(/[^\w\s-]/g, '')
+    .split(/[\s_]+/)
+    .map(w => w.trim())
+    .filter(Boolean);
+
+  const scoredWords = [];
+
+  for (const w of words) {
+    const cleaned = w.replace(/^-+|-+$/g, '');
+    if (cleaned.length >= 2 && !STOP_WORDS.has(cleaned) && !/^\d+$/.test(cleaned)) {
+      const isPriority = HIGH_PRIORITY_TECH_WORDS.has(cleaned);
+      const score = isPriority ? 2 : 1;
+      
+      const existing = scoredWords.find(item => item.word === cleaned);
+      if (existing) {
+        // Boost frequency importance
+        existing.score += 0.5;
+      } else {
+        scoredWords.push({ word: cleaned, score, index: scoredWords.length });
+      }
+    }
+  }
+
+  // Combine phrases (score 3) and words
+  const candidates = [
+    ...foundPhrases.map((phrase, idx) => ({ word: phrase, score: 3, index: -100 + idx })),
+    ...scoredWords
+  ];
+
+  // Sort candidates by score descending, then by original appearance index ascending to preserve order on ties
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return a.index - b.index;
+  });
+
+  // Extract top 4-5 terms
+  const result = candidates.map(c => c.word).slice(0, 5);
+
+  // If empty, fallback to the first 3 cleaned words of the text
+  if (result.length === 0) {
+    const fallbackWords = words.filter(w => w.length >= 2).slice(0, 3);
+    return fallbackWords;
+  }
+
+  return result;
+}
+

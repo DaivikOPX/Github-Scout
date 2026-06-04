@@ -27,6 +27,8 @@ import {
   scrollToResults
 } from './results.js';
 
+import { extractSignificantKeywords } from './utils.js';
+
 
 import {
   getAiProvider,
@@ -131,6 +133,16 @@ export function removeInterest(text) {
   updateSearchBtn();
 }
 
+export function autoResizeInput() {
+  const input = document.getElementById('interest-input');
+  if (!input) return;
+  if (input.tagName.toLowerCase() === 'textarea') {
+    input.style.height = '24px';
+    const newHeight = Math.max(input.scrollHeight, 24);
+    input.style.height = Math.min(newHeight, 200) + 'px';
+  }
+}
+
 export function updateSearchBtn() { 
   const input = document.getElementById('interest-input');
   const btn = document.getElementById('search-btn');
@@ -152,15 +164,29 @@ export function initInterestInput() {
   if (!input) return;
   
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter') {
       const modeEl = document.querySelector('input[name="search-mode"]:checked');
       const searchMode = modeEl ? modeEl.value : 'repo';
       if (searchMode === 'idea') {
-        return; // In idea mode, let Enter proceed directly to search execution
+        if (e.shiftKey) {
+          // Allow shift+enter newline
+          return;
+        }
+        e.preventDefault();
+        executeSearch();
+      } else {
+        e.preventDefault();
+        const val = input.value.trim().replace(/,$/, '');
+        if (val) addInterest(val);
       }
-      e.preventDefault();
-      const val = input.value.trim().replace(/,$/, '');
-      if (val) addInterest(val);
+    } else if (e.key === ',') {
+      const modeEl = document.querySelector('input[name="search-mode"]:checked');
+      const searchMode = modeEl ? modeEl.value : 'repo';
+      if (searchMode !== 'idea') {
+        e.preventDefault();
+        const val = input.value.trim().replace(/,$/, '');
+        if (val) addInterest(val);
+      }
     }
   });
 
@@ -173,13 +199,17 @@ export function initInterestInput() {
     if (val) addInterest(val);
   });
   
-  input.addEventListener('input', updateSearchBtn);
+  input.addEventListener('input', () => {
+    updateSearchBtn();
+    autoResizeInput();
+  });
 
   // Search mode radio buttons change listener
   document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
     radio.addEventListener('change', () => {
       renderTags();
       updateSearchBtn();
+      autoResizeInput();
     });
   });
 }
@@ -209,12 +239,6 @@ export function initQuickPicks() {
 export function initSearchButton() {
   const sBtn = document.getElementById('search-btn');
   if (sBtn) sBtn.addEventListener('click', executeSearch);
-  const input = document.getElementById('interest-input');
-  if (input) {
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') executeSearch();
-    });
-  }
 }
 
 export function initRotatingText() {
@@ -392,7 +416,8 @@ export async function executeSearch() {
         }
       } catch (err) {
         console.warn('AI Matchmaker translation failed. Falling back to keyword mode.', err);
-        newKeywords = [originalIdea.split(/[\s,]+/).filter(Boolean).slice(0, 3)];
+        const extracted = extractSignificantKeywords(originalIdea);
+        newKeywords = [extracted];
         showToast('⚠️ Matchmaker translation failed. Falling back to normal keyword search.', 'warning');
       }
 

@@ -192,13 +192,19 @@ function initWelcomeDashboard() {
               const radioIdea = document.querySelector('input[name="search-mode"][value="idea"]');
               if (radioIdea) radioIdea.checked = true;
               const input = document.getElementById('interest-input');
-              if (input) input.value = item.originalIdea;
+              if (input) {
+                input.value = item.originalIdea;
+                input.dispatchEvent(new Event('input'));
+              }
               setCurrentInterests([]);
             } else {
               const radioRepo = document.querySelector('input[name="search-mode"][value="repo"]');
               if (radioRepo) radioRepo.checked = true;
               const input = document.getElementById('interest-input');
-              if (input) input.value = '';
+              if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+              }
               setCurrentInterests([...item.interests]);
             }
             renderTags();
@@ -411,7 +417,10 @@ function initResultsActions() {
         }
         
         const inputVal = document.getElementById('interest-input');
-        if (inputVal) inputVal.value = newInterests.join(', ');
+        if (inputVal) {
+          inputVal.value = newInterests.join(', ');
+          inputVal.dispatchEvent(new Event('input'));
+        }
         setCurrentInterests(newInterests);
         renderTags();
         updateSearchBtn();

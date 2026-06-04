@@ -671,6 +671,24 @@ a:hover {
   font-size: 1.05rem;
   font-family: var(--font-sans);
   width: 100%;
+  resize: none;
+  height: 24px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.interest-input::-webkit-scrollbar {
+  width: 4px;
+}
+
+.interest-input::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.interest-input::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .interest-input::placeholder {

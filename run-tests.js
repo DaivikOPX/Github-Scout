@@ -35,7 +35,7 @@ function assert(condition, message) {
 }
 
 // 2. Dynamically import modules (after mocking globals, avoiding browser dependencies)
-const { buildDirectoryTree, parseMarkdown, extractJsonObjects, parseManifestDependencies } = await import('./src/utils.js');
+const { buildDirectoryTree, parseMarkdown, extractJsonObjects, parseManifestDependencies, extractSignificantKeywords } = await import('./src/utils.js');
 const {
   createCollection, getCollections, renameCollection, deleteCollection,
   getCachedResults, setCachedResults, addToCompare, getCompareList, clearCompare
@@ -318,7 +318,36 @@ try {
   console.log('   🟢 Passed!');
 
   // ────────────────────────────────────────────────────────
-  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [50/50 RESOLVED]');
+  // Test Case 9: Ranked Keyword Extractor with Phrase Support
+  // ────────────────────────────────────────────────────────
+  console.log(' - Testing extractSignificantKeywords ranking and phrase extractor...');
+  
+  // 1. Multi-word tech phrase detection & hyphenation
+  const text1 = "I want to build a fitness tracker app using pose estimation and tensorflow";
+  const keywords1 = extractSignificantKeywords(text1);
+  assert(keywords1.includes("fitness-tracker"), "Should extract and hyphenate phrase 'fitness tracker'");
+  assert(keywords1.includes("pose-estimation"), "Should extract and hyphenate phrase 'pose estimation'");
+  assert(keywords1.includes("tensorflow"), "Should extract tensorflow");
+  assert(!keywords1.includes("want") && !keywords1.includes("app"), "Should filter out stop words and general terms");
+
+  // 2. Technical word ranking (high priority tech words should come first)
+  const text2 = "compiler logic functional rust language";
+  const keywords2 = extractSignificantKeywords(text2);
+  // 'rust' and 'compiler' are in HIGH_PRIORITY_TECH_WORDS (score 2)
+  // 'functional' and 'logic' are standard keywords (score 1)
+  assert(keywords2[0] === "compiler" && keywords2[1] === "rust", "High-priority tech words compiler and rust should come first");
+  assert(keywords2.includes("functional") && keywords2.includes("logic"), "Should include logic and functional words");
+  assert(!keywords2.includes("language"), "Should filter out language");
+
+  // 3. Fallback check for empty results or purely non-technical text
+  const text3 = "I want to do this thing please help";
+  const keywords3 = extractSignificantKeywords(text3);
+  assert(keywords3.length > 0, "Fallback should return at least some words if no tech words are found");
+  
+  console.log('   🟢 Passed!');
+
+  // ────────────────────────────────────────────────────────
+  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [51/51 RESOLVED]');
   process.exit(0);
 } catch (testErr) {
   console.error('❌ Test Runner Crash:', testErr);
