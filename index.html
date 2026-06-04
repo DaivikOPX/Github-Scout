@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Git Scout — AI-powered GitHub repository discovery using open-source models. Find the best repos for your interests." />
+  <title>Git Scout — AI GitHub Repo Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body { opacity: 0; visibility: hidden; background: #050508; }
+    body.loading { overflow: hidden; }
+    #preloader { position: fixed; inset: 0; background: #050508; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.6s ease, visibility 0.6s; }
+    #preloader.fade-out { opacity: 0; visibility: hidden; }
+    .loader-rings { width: 60px; height: 60px; position: relative; }
+    .ring { position: absolute; inset: 0; border: 2px solid transparent; border-top-color: #9d68ff; border-radius: 50%; animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+    .ring:nth-child(2) { border-top-color: #22d3ee; animation-delay: -0.3s; }
+    .ring:nth-child(3) { border-top-color: #34d399; animation-delay: -0.6s; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="loading">
+  <div id="preloader">
+    <div class="loader-rings">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+    </div>
+  </div>
+  <script>
+    // Fail-safe: if main.js fails, reveal body after 3s
+    setTimeout(() => {
+      document.body.classList.remove('loading');
+      document.body.classList.add('loaded');
+      document.body.style.opacity = '1';
+      document.body.style.visibility = 'visible';
+      const p = document.getElementById('preloader');
+      if(p) {
+        p.style.opacity = '0';
+        setTimeout(() => p.style.display = 'none', 600);
+      }
+    }, 3000);
+  </script>
+  <noscript>
+    <style>body { opacity: 1 !important; }</style>
+  </noscript>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo-glow"></div>
+      <span class="nav-logo">📡</span>
+      <span class="nav-title">Git Scout</span>
+    </div>
+    
+
+
+    <div class="nav-actions">
+      <button class="nav-btn" id="bookmarks-btn" title="Bookmarks">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="badge-count" id="bookmark-badge" style="display:none">0</span>
+      </button>
+      <div class="history-wrapper">
+        <button class="nav-btn" id="history-btn" title="Search History">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+        <div class="history-dropdown" id="history-dropdown"></div>
+      </div>
+      <button class="nav-btn" id="settings-toggle" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal-overlay">
+    <div class="modal" id="settings-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Settings</h3>
+        <button class="modal-close" id="settings-close">×</button>
+      </div>
+
+      <div class="settings-security-warning">
+        🔒 <strong>Device Storage:</strong> Your keys and tokens are saved locally in your browser. When using cloud providers (Groq, OpenAI, Anthropic, Gemini), keys are sent directly to their APIs to process requests. For 100% private use, choose <strong>Ollama</strong> — all AI processing stays entirely on your machine.
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Choose AI Provider</label>
+        <p class="setting-explanation-hint">💡 <em>Use Ollama if you want local/free. Use Groq if you want cloud/fast.</em></p>
+        <div class="radio-group" style="margin-top: 0.5rem;">
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="ollama" id="provider-ollama" checked />
+            <span class="radio-label">🦙 Ollama (Local)</span>
+            <span class="radio-desc">Free, private, runs on your machine</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="groq" id="provider-groq" />
+            <span class="radio-label">⚡ Groq (Cloud)</span>
+            <span class="radio-desc">Fast, free tier, needs API key</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="openai" id="provider-openai" />
+            <span class="radio-label">🟢 OpenAI</span>
+            <span class="radio-desc">Cloud models (GPT-5.5)</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="anthropic" id="provider-anthropic" />
+            <span class="radio-label">🧠 Anthropic</span>
+            <span class="radio-desc">Claude Sonnet 4.6</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="gemini" id="provider-gemini" />
+            <span class="radio-label">✨ Google Gemini</span>
+            <span class="radio-desc">Gemini 1.5 Pro/Flash</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <div class="setting-group" id="ollama-settings">
+        <label class="setting-label" for="ollama-model-input">Ollama Model <span class="setting-hint">(e.g. qwen2.5:7b)</span></label>
+        <input type="text" id="ollama-model-input" class="setting-input" placeholder="qwen2.5:7b" value="qwen2.5:7b" />
+        <div class="ollama-status" id="ollama-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking...</span>
+        </div>
+        <button class="btn btn-sm btn-outline" id="test-ollama-btn" style="margin-top:0.5rem">Test Connection</button>
+      </div>
+
+      <div class="setting-group" id="groq-settings" style="display:none">
+        <label class="setting-label">Groq API Key <span class="setting-hint">(<a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">get free key</a>)</span></label>
+        <input type="password" id="groq-key-input" class="setting-input" placeholder="gsk_..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <input type="text" id="groq-model-input" class="setting-input" list="groq-models" placeholder="meta-llama/llama-4-scout-17b-16e-instruct" />
+        <datalist id="groq-models">
+          <option value="meta-llama/llama-4-scout-17b-16e-instruct">
+          <option value="qwen/qwen3-32b">
+          <option value="llama-3.3-70b-versatile">
+          <option value="gpt-oss-120b-high">
+          <option value="mistral-saba-24b">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="openai-settings" style="display:none">
+        <label class="setting-label">OpenAI API Key</label>
+        <input type="password" id="openai-key-input" class="setting-input" placeholder="sk-proj-..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <input type="text" id="openai-model-input" class="setting-input" list="openai-models" placeholder="gpt-5.5" />
+        <datalist id="openai-models">
+          <option value="gpt-5.5">
+          <option value="gpt-5.5-pro">
+          <option value="gpt-5.5-instant">
+          <option value="gpt-5.4">
+          <option value="gpt-5.3-codex">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="anthropic-settings" style="display:none">
+        <label class="setting-label">Anthropic API Key</label>
+        <input type="password" id="anthropic-key-input" class="setting-input" placeholder="sk-ant-..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <input type="text" id="anthropic-model-input" class="setting-input" list="anthropic-models" placeholder="claude-sonnet-4-6" />
+        <datalist id="anthropic-models">
+          <option value="claude-opus-4-7">
+          <option value="claude-sonnet-4-6">
+          <option value="claude-opus-4-6">
+          <option value="claude-haiku-4-5">
+          <option value="claude-sonnet-4-5">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="gemini-settings" style="display:none">
+        <label class="setting-label">Gemini API Key</label>
+        <input type="password" id="gemini-key-input" class="setting-input" placeholder="AIzaSy..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <input type="text" id="gemini-model-input" class="setting-input" list="gemini-models" placeholder="gemini-2.5-flash" />
+        <datalist id="gemini-models">
+          <option value="gemini-3.5-flash">
+          <option value="gemini-3.1-pro-preview">
+          <option value="gemini-2.5-pro">
+          <option value="gemini-2.5-flash">
+          <option value="gemini-2.5-flash-lite">
+        </datalist>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <div class="setting-group">
+        <label class="setting-label">GitHub Token <span class="setting-hint">(<a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener noreferrer">optional</a>)</span></label>
+        <input type="password" id="github-token-input" class="setting-input" placeholder="ghp_..." autocomplete="off" />
+      </div>
+
+      <button class="btn btn-primary btn-full btn-ripple" id="save-settings" disabled>Save Settings</button>
+    </div>
+  </div>
+
+  <!-- Bookmarks Modal -->
+  <div class="modal-overlay" id="bookmarks-modal-overlay">
+    <div class="modal" id="bookmarks-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">🔖 Bookmarks</h3>
+        <button class="modal-close" id="bookmarks-close">×</button>
+      </div>
+      <div id="bookmarks-list"></div>
+    </div>
+  </div>
+
+
+
+  <!-- Stats Banner -->
+
+
+  <!-- Hero -->
+  <main>
+    <!-- Pane 1: Home -->
+    <div class="tab-pane active" id="pane-home" role="tabpanel" aria-labelledby="tab-home" tabindex="0">
+      <section class="hero" id="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+          <div class="hero-title-area">
+            <h1 class="hero-title">
+              Discover Your Next <br>
+              <span class="gradient-text-hero">Favorite Repository</span>
+            </h1>
+            <p class="hero-subtitle">
+              AI-powered open-source discovery. Scout the codebase, map the architecture, and build faster.
+            </p>
+          </div>
+          
+          <div class="search-deck-console">
+            <div class="search-mode-toggle">
+              <label class="mode-option">
+                <input type="radio" name="search-mode" value="repo" checked>
+                <span class="mode-label">Scout by Keywords</span>
+              </label>
+              <label class="mode-option">
+                <input type="radio" name="search-mode" value="idea">
+                <span class="mode-label">Idea Matchmaker</span>
+              </label>
+            </div>
+              
+            <div class="search-container">
+              <div class="input-wrapper" id="input-wrapper">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <div class="interest-tags" id="interest-tags"></div>
+                <input type="text" id="interest-input" class="interest-input" placeholder="Type interest or paste GitHub URL..." autocomplete="off" />
+              </div>
+              <button class="btn btn-search" id="search-btn" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Scout</span>
+              </button>
+            </div>
+            <div class="quick-picks-section">
+              <p class="quick-picks-label">Popular:</p>
+              <div class="quick-picks" id="quick-picks"></div>
+              <button class="show-more-picks" id="show-more-picks">Show more ▾</button>
+            </div>
+            <p class="search-kbd-hint">Press <kbd>/</kbd> from anywhere to focus search</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Welcome Dashboard -->
+      <section class="dashboard-section" id="welcome-dashboard" style="display:none">
+        <div class="dashboard-slim-panel">
+          <div class="dashboard-slim-header">
+            <h4 class="dashboard-slim-title">Continue where you left off</h4>
+            <div class="dashboard-slim-tabs" id="dashboard-slim-tabs">
+              <button class="dash-tab-btn active" data-tab="searches">Recent Searches</button>
+              <button class="dash-tab-btn" data-tab="viewed">Recently Viewed</button>
+              <button class="dash-tab-btn" data-tab="favorites">Favorites</button>
+            </div>
+          </div>
+          <div class="dashboard-slim-content" id="dashboard-slim-content"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Pane 2: Results -->
+    <div class="tab-pane" id="pane-results" role="tabpanel" aria-labelledby="tab-results" tabindex="-1" style="display:none">
+      <section class="results-section" id="results" style="display:none"></section>
+      <div style="display: flex; justify-content: center; width: 100%; margin: 2rem 0;">
+        <button class="btn btn-outline btn-ripple" id="search-more-btn" style="display:none; width: 220px;">Search More</button>
+      </div>
+    </div>
+
+      <!-- Deep Dive Modal Overlay (restored as a premium fullscreen overlay) -->
+      <div class="modal-overlay" id="deep-dive-modal-overlay">
+        <div class="modal modal-fullscreen" id="deep-dive-modal">
+          <div class="modal-header">
+            <div class="deep-dive-title-wrapper" style="display: flex; align-items: center; gap: 1rem;">
+              <button class="btn btn-outline back-btn" id="deep-dive-close" style="padding: 0.5rem 1.2rem; font-size: 0.85rem; height: 38px;">
+                ◀ Back
+              </button>
+              <h3 class="modal-title" id="deep-dive-title">🧠 AI Deep Dive</h3>
+            </div>
+            <div class="deep-dive-controls" id="deep-dive-controls" style="display:none;">
+              <button class="btn btn-sm btn-outline btn-ripple" id="deep-dive-refresh">↻ Refresh</button>
+              <button class="btn btn-sm btn-outline btn-ripple" id="deep-dive-export">📥 Export MD</button>
+
+            </div>
+          </div>
+          <div class="modal-body" id="deep-dive-modal-body">
+            <div class="deep-dive-sidebar">
+              <div class="sidebar-card">
+                <h5 class="sidebar-title"><span>📊</span> Quick Stats</h5>
+                <div id="deep-dive-sidebar-stats"></div>
+              </div>
+              <div class="sidebar-card">
+                <h5 class="sidebar-title"><span>🛡️</span> Project Health</h5>
+                <div id="deep-dive-sidebar-health"></div>
+              </div>
+              <div class="sidebar-card" style="display: flex; flex-direction: column; max-height: 280px; min-height: 180px;">
+                <h5 class="sidebar-title"><span>📂</span> File Explorer</h5>
+                <div id="deep-dive-sidebar-tree" role="tree" aria-label="Codebase File Tree" class="tree-container" style="flex: 1; overflow-y: auto;">
+                  <div class="tree-loading" style="color: var(--text-muted); font-size: 0.8rem;">Loading tree...</div>
+                </div>
+              </div>
+              <div class="sidebar-card">
+                <h5 class="sidebar-title"><span>📦</span> Dependencies</h5>
+                <div id="deep-dive-sidebar-deps" class="deps-container">
+                  <div class="deps-loading" style="color: var(--text-muted); font-size: 0.8rem;">Scanning manifests...</div>
+                </div>
+              </div>
+            </div>
+            <div class="report-container">
+              <div class="deep-dive-tabs">
+                <button class="dd-tab-btn active" id="dd-tab-report" data-pane="dd-pane-report">
+                  <span>📄</span> Report
+                </button>
+                <button class="dd-tab-btn" id="dd-tab-chat" data-pane="dd-pane-chat">
+                  <span>💬</span> Ask Architect
+                </button>
+              </div>
+              
+              <div class="dd-pane active" id="dd-pane-report">
+                <div id="deep-dive-content" class="report-content"></div>
+              </div>
+              
+              <div class="dd-pane" id="dd-pane-chat" style="display: none;">
+                <div class="dd-chat-container">
+                  <div class="dd-chat-messages" id="dd-chat-messages">
+                    <div class="dd-chat-welcome">
+                      <div class="dd-welcome-header">
+                        <span class="dd-welcome-avatar">🤖</span>
+                        <h4>Ask the Architect</h4>
+                        <p>Ask follow-up questions, explore code mechanics, and audit security risks for this repository.</p>
+                      </div>
+                      <div class="dd-suggestions-grid">
+                        <button class="dd-suggestion-btn" data-prompt="Can you explain the folder structure and where key files reside?">
+                          📂 Folder Structure
+                        </button>
+                        <button class="dd-suggestion-btn" data-prompt="How do I get this project up and running locally?">
+                          ⚙️ Running Locally
+                        </button>
+                        <button class="dd-suggestion-btn" data-prompt="What are the potential security risks or licensing issues in this repo?">
+                          🛡️ Security Risks
+                        </button>
+                        <button class="dd-suggestion-btn" data-prompt="What are some creative ways I can extend or build on top of this repository?">
+                          💡 Creative Extension
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="dd-chat-input-deck">
+                    <div class="dd-chat-input-wrapper">
+                      <button class="dd-chat-clear-btn" id="dd-chat-clear" title="Clear Chat History">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      </button>
+                      <textarea id="dd-chat-input" class="dd-chat-input" placeholder="Ask a follow-up question... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                      <button class="btn btn-primary dd-chat-send-btn" id="dd-chat-send" title="Send message">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Floating Detail Drawer for File/Dependency Explanations -->
+            <div class="dd-detail-drawer" id="dd-detail-drawer">
+              <div class="dd-detail-header">
+                <h4 id="dd-detail-title" class="gradient-text">File Explanation</h4>
+                <button class="dd-detail-close" id="dd-detail-close">×</button>
+              </div>
+              <div class="dd-detail-body" id="dd-detail-body">
+                <p style="color: var(--text-muted);">Select a file or dependency to view its technical explanation.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <span class="footer-logo">📡</span>
+      <span class="footer-name">Git Scout</span>
+    </div>
+    <p class="footer-tagline">AI-powered open-source discovery. 100% private with local models.</p>
+  </footer>
+
+  <!-- Back to top button -->
+  <button class="back-to-top" id="back-to-top" title="Back to top">↑</button>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
