@@ -384,11 +384,15 @@ export async function executeSearch() {
       try {
         newKeywords = await translateIdeaToKeywords(originalIdea, { provider, apiKey, model });
         if (newKeywords && newKeywords.length) {
-          showToast(`🔍 Searching for: ${newKeywords.join(', ')}`, 'success');
+          if (!Array.isArray(newKeywords[0])) {
+            newKeywords = [newKeywords];
+          }
+          const flatKeywords = newKeywords.map(arr => arr.join(' + ')).join(', ');
+          showToast(`🔍 Searching for: ${flatKeywords}`, 'success');
         }
       } catch (err) {
         console.warn('AI Matchmaker translation failed. Falling back to keyword mode.', err);
-        newKeywords = originalIdea.split(/[\s,]+/).filter(Boolean).slice(0, 3);
+        newKeywords = [originalIdea.split(/[\s,]+/).filter(Boolean).slice(0, 3)];
         showToast('⚠️ Matchmaker translation failed. Falling back to normal keyword search.', 'warning');
       }
 
@@ -402,7 +406,25 @@ export async function executeSearch() {
     updateLoadingMessage('Searching GitHub repositories...');
     updateProgress(10);
     setActiveSearchInterests(searchInterests);
-    const repos = await searchRepos(searchInterests, { token: getGithubToken() });
+    
+    let repos = [];
+    if (searchMode === 'idea' && Array.isArray(searchInterests) && Array.isArray(searchInterests[0])) {
+      const seen = new Set();
+      for (const queryKeywords of searchInterests) {
+        const pageRepos = await searchRepos(queryKeywords, {
+          token: getGithubToken(),
+          includeTopicSearch: false
+        });
+        for (const r of pageRepos) {
+          if (!seen.has(r.id)) {
+            seen.add(r.id);
+            repos.push(r);
+          }
+        }
+      }
+    } else {
+      repos = await searchRepos(searchInterests, { token: getGithubToken() });
+    }
     if (!repos.length) { renderError(results, 'No repos found. Try broader terms.'); return; }
     updateProgress(25);
 
@@ -418,7 +440,8 @@ export async function executeSearch() {
 
     updateLoadingStep('analyze');
     updateLoadingMessage('Agent 1 Analyst: Scoring & creating report cards...');
-    const analyzed = await analyzeRepos(enriched, searchInterests, { provider, apiKey, model }, (done, total) => {
+    const flatInterests = searchMode === 'idea' ? searchInterests.flat() : searchInterests;
+    const analyzed = await analyzeRepos(enriched, flatInterests, { provider, apiKey, model }, (done, total) => {
       updateProgress(50 + Math.round((done / total) * 45));
     });
     updateProgress(100);
@@ -497,12 +520,32 @@ export async function executeSearchMore() {
     const token = getGithubToken();
     const nextPage = state.currentPage + 1;
     const searchInterests = state.activeSearchInterests.length ? state.activeSearchInterests : state.currentInterests;
+    const modeEl = document.querySelector('input[name="search-mode"]:checked');
+    const searchMode = modeEl ? modeEl.value : 'repo';
     
-    const repos = await searchRepos(searchInterests, {
-      token,
-      page: nextPage,
-      includeTopicSearch: false
-    });
+    let repos = [];
+    if (searchMode === 'idea' && Array.isArray(searchInterests) && Array.isArray(searchInterests[0])) {
+      const seen = new Set();
+      for (const queryKeywords of searchInterests) {
+        const pageRepos = await searchRepos(queryKeywords, {
+          token,
+          page: nextPage,
+          includeTopicSearch: false
+        });
+        for (const r of pageRepos) {
+          if (!seen.has(r.id)) {
+            seen.add(r.id);
+            repos.push(r);
+          }
+        }
+      }
+    } else {
+      repos = await searchRepos(searchInterests, {
+        token,
+        page: nextPage,
+        includeTopicSearch: false
+      });
+    }
 
     const existingIds = new Set(state.lastSearchedRepos.map(r => r.id));
     const uniqueNew = repos.filter(r => !existingIds.has(r.id));
@@ -526,13 +569,12 @@ export async function executeSearchMore() {
 
     btn.innerHTML = `<svg class="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/></svg><span>Scoring AI cards...</span>`;
 
-    const analyzed = await analyzeRepos(enriched, searchInterests, { provider, apiKey, model });
+    const flatInterests = searchMode === 'idea' ? searchInterests.flat() : searchInterests;
+    const analyzed = await analyzeRepos(enriched, flatInterests, { provider, apiKey, model });
 
     const updatedRepos = [...state.lastSearchedRepos, ...analyzed];
     setLastSearchedRepos(updatedRepos);
 
-    const modeEl = document.querySelector('input[name="search-mode"]:checked');
-    const searchMode = modeEl ? modeEl.value : 'repo';
     const input = document.getElementById('interest-input');
     const originalIdea = searchMode === 'idea' ? (input ? input.value.trim() : '') : state.currentInterests.join(' ');
     const hasToken = !!getGithubToken();

@@ -246,20 +246,30 @@ Return ONLY JSON: {"results": [...]}`;
   }
 }
 
-/**
- * Agent 2: The Matchmaker (Idea translation)
- */
 export async function translateIdeaToKeywords(idea, options = {}) {
   const { provider = 'groq', apiKey = '', model = '' } = options;
   const sanitizedIdea = JSON.stringify(idea || '');
   const prompt = `You are a GitHub Search Strategist. The user has a raw technical idea or problem description:
 ${sanitizedIdea}
 
-Analyze the user's idea and translate it strictly into a precise shopping list of 3-5 technical keywords/topics to search GitHub. 
-Focus strictly on the domain mentioned by the user. Do not invent unrelated topics.
-Example: If the idea is "fitness app using camera", output ["pose-estimation", "react-native", "health"].
-Example: If the idea is "laptop bios extension", output ["bios", "uefi", "firmware", "extension"].
-OUTPUT FORMAT: Return ONLY a valid JSON array of strings, nothing else. Do not output markdown blocks.`;
+Analyze the user's idea and translate it strictly into a JSON array containing 2-3 queries. Each query is an array of 2-3 specific technical keywords or topics that must be searched together on GitHub. 
+Focus strictly on the domain mentioned by the user. Combine technical concepts (e.g., framework, library, specialized topic) in each query to ensure highly relevant results. Do not include standalone generic keywords like "app", "health" or "software" as they will match unrelated projects.
+
+Example: If the idea is "fitness app using camera", output:
+[
+  ["pose-estimation", "fitness"],
+  ["camera", "fitness", "react-native"],
+  ["pose-estimation", "computer-vision"]
+]
+
+Example: If the idea is "laptop bios extension", output:
+[
+  ["bios", "uefi", "firmware"],
+  ["uefi", "coreboot"],
+  ["bios", "coreboot"]
+]
+
+OUTPUT FORMAT: Return ONLY a valid JSON array of arrays of strings, nothing else. Do not output markdown blocks.`;
 
   try {
     const content = await callAI(provider, apiKey, model, prompt, true);
@@ -284,6 +294,7 @@ OUTPUT FORMAT: Return ONLY a valid JSON array of strings, nothing else. Do not o
     throw err;
   }
 }
+
 
 /**
  * Agents 3 & 4: Deep Dive Engine (Architect & Teacher)
