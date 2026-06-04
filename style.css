@@ -1148,7 +1148,7 @@ a:hover {
 .card-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.65rem 0.5rem;
   margin-bottom: 1.5rem;
 }
 
@@ -1160,6 +1160,9 @@ a:hover {
   border: 1px solid transparent;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .badge-gem {
