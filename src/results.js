@@ -19,9 +19,20 @@ import {
   removeFromCompare,
   getCompareList,
   clearCompare,
-  addViewed
+  addViewed,
+  getAiProvider,
+  getGroqApiKey,
+  getOpenAiKey,
+  getAnthropicKey,
+  getGeminiKey,
+  getAiModel,
+  getGroqModel,
+  getOpenAiModel,
+  getAnthropicModel,
+  getGeminiModel
 } from './storage.js';
 
+import { generateComparisonGrades, DEFAULT_MODELS } from './ai.js';
 import { showToast } from './ui.js';
 
 const REPOS_PER_PAGE = 10;
@@ -576,6 +587,7 @@ export function showCompareDrawer(container) {
   const labelForks = 'Forks';
   const labelUpdated = 'Updated';
   const labelLicense = 'License';
+  const colors = ['#d946ef', '#00f5a0', '#00d4ff', '#f59e0b'];
 
   drawer.innerHTML = `
     <div class="compare-header">
@@ -585,27 +597,38 @@ export function showCompareDrawer(container) {
         <button class="btn btn-sm btn-outline" id="close-compare">Close</button>
       </div>
     </div>
-    <div class="compare-table-wrapper">
-      <table class="compare-table">
-        <thead><tr>
-          <th>Attribute</th>${list.map(r=>`<th><a href="${r.url}" target="_blank" rel="noopener noreferrer">${esc(r.name)}</a></th>`).join('')}
-        </tr></thead>
-        <tbody>
-          <tr><td>${labelScore}</td>${list.map(r=>`<td><strong style="color:${getScoreColor(r.aiScore)}">${r.aiScore}/10</strong></td>`).join('')}</tr>
-          <tr><td>Stars</td>${list.map(r=>`<td>⭐ ${formatNum(r.stars)}</td>`).join('')}</tr>
-          <tr><td>${labelForks}</td>${list.map(r=>`<td>🍴 ${formatNum(r.forks)}</td>`).join('')}</tr>
-          <tr><td>Language</td>${list.map(r=>`<td>${r.language}</td>`).join('')}</tr>
-          <tr><td>Health</td>${list.map(r=>`<td>${statusBadge(r.maintenanceStatus)}</td>`).join('')}</tr>
-          <tr><td>Safety</td>${list.map(r=>`<td>${safetyBadge(r.safetyFlag, r.safetyNote||'')}</td>`).join('')}</tr>
-          <tr><td>Difficulty</td>${list.map(r=>`<td>${diffBadge(r.difficulty)}</td>`).join('')}</tr>
-          <tr><td>Size</td>${list.map(r=>`<td>${r.sizeLabel}</td>`).join('')}</tr>
-          <tr><td>${labelUpdated}</td>${list.map(r=>`<td>${timeAgo(r.daysSinceUpdate)}</td>`).join('')}</tr>
-          <tr><td>${labelLicense}</td>${list.map(r=>`<td>${r.license}</td>`).join('')}</tr>
-          <tr><td>Summary</td>${list.map(r=>`<td class="compare-summary">${esc(r.aiSummary||'')}</td>`).join('')}</tr>
-          <tr><td>Pros</td>${list.map(r=>`<td><ul class="pros-list">${(r.aiPros||[]).map(p=>`<li>${esc(p)}</li>`).join('')}</ul></td>`).join('')}</tr>
-          <tr><td>Cons</td>${list.map(r=>`<td><ul class="cons-list">${(r.aiCons||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></td>`).join('')}</tr>
-        </tbody>
-      </table>
+    <div class="compare-cockpit-layout" style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; overflow-y: auto; flex: 1; min-height: 0;">
+      <div class="compare-radar-section" style="flex: 1 1 300px; max-width: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.02); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 1rem;">
+        <h4 style="margin-bottom: 1rem; font-size: 1rem; font-weight: 700; color: var(--text-secondary); text-align: center; display: flex; align-items: center; gap: 8px;">
+          <span>🛡️</span> Architectural Capability Matrix
+        </h4>
+        <div id="compare-radar-chart-target" style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
+          <div class="radar-pulse" style="margin-bottom: 1rem;"></div>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Consulting AI Architect...</span>
+        </div>
+      </div>
+      <div class="compare-table-wrapper" style="flex: 2 1 500px; min-width: 0;">
+        <table class="compare-table">
+          <thead><tr>
+            <th>Attribute</th>${list.map((r, idx)=>`<th style="border-top: 3px solid ${colors[idx % colors.length]}"><a href="${r.url}" target="_blank" rel="noopener noreferrer">${esc(r.name)}</a></th>`).join('')}
+          </tr></thead>
+          <tbody>
+            <tr><td>${labelScore}</td>${list.map(r=>`<td><strong style="color:${getScoreColor(r.aiScore)}">${r.aiScore}/10</strong></td>`).join('')}</tr>
+            <tr><td>Stars</td>${list.map(r=>`<td>⭐ ${formatNum(r.stars)}</td>`).join('')}</tr>
+            <tr><td>${labelForks}</td>${list.map(r=>`<td>🍴 ${formatNum(r.forks)}</td>`).join('')}</tr>
+            <tr><td>Language</td>${list.map(r=>`<td>${r.language}</td>`).join('')}</tr>
+            <tr><td>Health</td>${list.map(r=>`<td>${statusBadge(r.maintenanceStatus)}</td>`).join('')}</tr>
+            <tr><td>Safety</td>${list.map(r=>`<td>${safetyBadge(r.safetyFlag, r.safetyNote||'')}</td>`).join('')}</tr>
+            <tr><td>Difficulty</td>${list.map(r=>`<td>${diffBadge(r.difficulty)}</td>`).join('')}</tr>
+            <tr><td>Size</td>${list.map(r=>`<td>${r.sizeLabel}</td>`).join('')}</tr>
+            <tr><td>${labelUpdated}</td>${list.map(r=>`<td>${timeAgo(r.daysSinceUpdate)}</td>`).join('')}</tr>
+            <tr><td>${labelLicense}</td>${list.map(r=>`<td>${r.license}</td>`).join('')}</tr>
+            <tr><td>Summary</td>${list.map(r=>`<td class="compare-summary">${esc(r.aiSummary||'')}</td>`).join('')}</tr>
+            <tr><td>Pros</td>${list.map(r=>`<td><ul class="pros-list">${(r.aiPros||[]).map(p=>`<li>${esc(p)}</li>`).join('')}</ul></td>`).join('')}</tr>
+            <tr><td>Cons</td>${list.map(r=>`<td><ul class="cons-list">${(r.aiCons||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></td>`).join('')}</tr>
+          </tbody>
+        </table>
+      </div>
     </div>`;
   drawer.classList.add('open');
   
@@ -617,6 +640,160 @@ export function showCompareDrawer(container) {
   drawer.querySelector('#close-compare').addEventListener('click', () => {
     drawer.classList.remove('open');
   });
+
+  // Asynchronously load Comparison Radar Chart
+  async function loadRadarChart() {
+    const target = drawer.querySelector('#compare-radar-chart-target');
+    if (!target) return;
+
+    try {
+      const provider = getAiProvider();
+      let model = '';
+      if (provider === 'ollama') model = getAiModel() || DEFAULT_MODELS.ollama;
+      if (provider === 'groq') model = getGroqModel() || DEFAULT_MODELS.groq;
+      if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
+      if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
+      if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+
+      let apiKey = '';
+      if (provider === 'groq') apiKey = getGroqApiKey();
+      if (provider === 'openai') apiKey = getOpenAiKey();
+      if (provider === 'anthropic') apiKey = getAnthropicKey();
+      if (provider === 'gemini') apiKey = getGeminiKey();
+
+      const grades = await generateComparisonGrades(list, { provider, apiKey, model });
+
+      const numAxes = 5;
+      const angleStep = (2 * Math.PI) / numAxes;
+      const axisAngles = [];
+      for (let i = 0; i < numAxes; i++) {
+        axisAngles.push(-Math.PI / 2 + i * angleStep);
+      }
+
+      // Draw background grid lines (pentagons)
+      let gridHtml = '';
+      for (let r = 20; r <= 100; r += 20) {
+        const points = axisAngles.map(angle => {
+          const x = 150 + r * Math.cos(angle);
+          const y = 150 + r * Math.sin(angle);
+          return `${x},${y}`;
+        }).join(' ');
+        gridHtml += `<polygon points="${points}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" />\n`;
+      }
+
+      // Draw axis lines from center to outer edges
+      let axisLinesHtml = '';
+      axisAngles.forEach(angle => {
+        const x = 150 + 100 * Math.cos(angle);
+        const y = 150 + 100 * Math.sin(angle);
+        axisLinesHtml += `<line x1="150" y1="150" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1" />\n`;
+      });
+
+      // Axis labels
+      const labels = [
+        'Learning Curve',
+        'API Ergonomics',
+        'Maintenance Velocity',
+        'Efficiency',
+        'Reliability'
+      ];
+      let labelsHtml = '';
+      labels.forEach((label, i) => {
+        const angle = axisAngles[i];
+        const x = 150 + 118 * Math.cos(angle);
+        const y = 150 + 118 * Math.sin(angle);
+        
+        let anchor = 'middle';
+        let dy = '0.35em';
+        if (Math.abs(Math.cos(angle)) < 0.1) {
+          anchor = 'middle';
+          dy = Math.sin(angle) < 0 ? '-0.5em' : '1.2em';
+        } else {
+          anchor = Math.cos(angle) > 0 ? 'start' : 'end';
+          dy = '0.35em';
+        }
+        
+        labelsHtml += `<text x="${x}" y="${y}" text-anchor="${anchor}" dy="${dy}" fill="var(--text-secondary)" font-size="9" font-family="'Space Grotesk', sans-serif" font-weight="600">${label}</text>\n`;
+      });
+
+      // Polygons & dots for each repo
+      let polygonsHtml = '';
+      let pointsHtml = '';
+
+      list.forEach((repo, repoIdx) => {
+        const color = colors[repoIdx % colors.length];
+        const repoGrades = grades.find(g => g.name === repo.name) || {
+          learningCurve: 5,
+          apiErgonomics: 5,
+          maintenanceVelocity: 5,
+          efficiency: 5,
+          productionReliability: 5
+        };
+
+        const scores = [
+          repoGrades.learningCurve ?? 5,
+          repoGrades.apiErgonomics ?? 5,
+          repoGrades.maintenanceVelocity ?? 5,
+          repoGrades.efficiency ?? 5,
+          repoGrades.productionReliability ?? 5
+        ];
+
+        const points = axisAngles.map((angle, dimIdx) => {
+          const score = scores[dimIdx];
+          const r = (score / 10) * 100;
+          const x = 150 + r * Math.cos(angle);
+          const y = 150 + r * Math.sin(angle);
+          return { x, y, score };
+        });
+
+        const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ');
+
+        // Draw poly area
+        polygonsHtml += `<polygon points="${pointsStr}" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" />\n`;
+
+        // Draw vertices
+        points.forEach((p, dimIdx) => {
+          pointsHtml += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${p.score >= 8 ? '#00f5a0' : color}" stroke="#0f0c23" stroke-width="1.5">
+            <title>${esc(repo.name)} - ${labels[dimIdx]}: ${p.score}/10</title>
+          </circle>\n`;
+        });
+      });
+
+      const svgString = `
+        <svg viewBox="0 0 300 300" width="100%" height="100%" style="max-height: 250px;">
+          <!-- Background grid -->
+          ${gridHtml}
+          <!-- Axes lines -->
+          ${axisLinesHtml}
+          <!-- Labels -->
+          ${labelsHtml}
+          <!-- Polygons -->
+          ${polygonsHtml}
+          <!-- Dots -->
+          ${pointsHtml}
+        </svg>
+        <div class="radar-legend" style="display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; font-size: 0.8rem;">
+          ${list.map((r, i) => `
+            <span style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colors[i % colors.length]}; display: inline-block;"></span>
+              ${esc(r.name)}
+            </span>
+          `).join('')}
+        </div>
+      `;
+
+      target.innerHTML = svgString;
+    } catch (err) {
+      console.error('Failed to load comparison radar chart:', err);
+      target.innerHTML = `
+        <div style="font-size: 0.8rem; color: var(--accent-red); text-align: center; padding: 1rem;">
+          ⚠️ Radar chart generation failed. ${esc(err.message)}
+        </div>
+      `;
+    }
+  }
+
+  loadRadarChart();
 }
 
 // Bind custom listeners to keep UI in sync

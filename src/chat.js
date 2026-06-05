@@ -21,12 +21,16 @@ import {
   getGroqModel,
   getOpenAiModel,
   getAnthropicModel,
-  getGeminiModel
+  getGeminiModel,
+  getGithubToken,
+  getRepoChunks,
+  saveRepoChunks
 } from './storage.js';
 
 import { chatAboutRepo, DEFAULT_MODELS } from './ai.js';
-import { parseMarkdown } from './utils.js';
+import { parseMarkdown, computeTfidfSimilarity, chunkFileContent } from './utils.js';
 import { showToast } from './ui.js';
+import { fetchRepoFileContent } from './github.js';
 
 function esc(t) {
   if (!t) return '';
@@ -171,8 +175,12 @@ export async function submitChatMessage() {
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
 
+    // Query Cached Codebase Chunks from IndexedDB
+    const chunks = await getRepoChunks(repoFullName);
+    const relevantChunks = computeTfidfSimilarity(text, chunks, 4); // Fetch top 4 code segments
+
     const reply = await chatAboutRepo(repoFullName, state.activeFileTree, state.activeReportText, nextHistory, {
-      provider, apiKey, model
+      provider, apiKey, model, codeChunks: relevantChunks
     });
 
     // Guard checks: verify if the user switched repos in the panel while loading
@@ -234,3 +242,62 @@ export function initChatSystem() {
     });
   }
 }
+
+/**
+ * Background repository indexer that downloads primary source files,
+ * splits them into overlapping semantic text segments, and caches them in IndexedDB.
+ */
+export async function indexRepoCodebaseInBackground(repoFullName, fileTree) {
+  try {
+    const cached = await getRepoChunks(repoFullName);
+    if (cached && cached.length > 0) {
+      console.log(`[Indexer] Codebase for ${repoFullName} already cached in IndexedDB.`);
+      return;
+    }
+
+    console.log(`[Indexer] Starting background indexing for ${repoFullName}...`);
+    
+    // Filter for primary business logic source files
+    const SUPPORTED_EXTS = ['.js', '.ts', '.py', '.rs', '.go', '.java', '.cpp', '.c', '.cs', '.rb', '.php', '.html', '.css'];
+    const EXCLUDED_DIRS = ['node_modules', 'dist', 'build', 'vendor', '.git', 'target', 'assets', 'images'];
+
+    const filteredPaths = fileTree.filter(p => {
+      const lower = p.toLowerCase();
+      const hasExt = SUPPORTED_EXTS.some(ext => lower.endsWith(ext));
+      const inExcluded = EXCLUDED_DIRS.some(dir => lower.includes(`/${dir}/`) || lower.startsWith(`${dir}/`));
+      const isLockfile = lower.endsWith('-lock.json') || lower.endsWith('.lock') || lower.endsWith('-lock.yaml');
+      return hasExt && !inExcluded && !isLockfile;
+    }).slice(0, 15); // Index up to 15 key source files to stay safe on rate limits
+
+    if (filteredPaths.length === 0) {
+      console.log('[Indexer] No primary source files found to index.');
+      return;
+    }
+
+    const token = getGithubToken();
+    const allChunks = [];
+
+    for (const filePath of filteredPaths) {
+      try {
+        const fileData = await fetchRepoFileContent(repoFullName, filePath, token, 15000); // 15KB max per file
+        if (fileData && fileData.content) {
+          const fileChunks = chunkFileContent(filePath, fileData.content, 800, 150);
+          allChunks.push(...fileChunks);
+        }
+      } catch (err) {
+        console.warn(`[Indexer] Failed to index file: ${filePath}`, err);
+      }
+      // Delay to avoid hitting rate limits
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (allChunks.length > 0) {
+      await saveRepoChunks(repoFullName, allChunks);
+      console.log(`[Indexer] Codebase indexing complete for ${repoFullName}. Chunks: ${allChunks.length}`);
+      showToast('⚡ Repository codebase successfully indexed for Ask Architect!', 'success');
+    }
+  } catch (err) {
+    console.error('[Indexer] Indexing failed:', err);
+  }
+}
+

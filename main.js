@@ -55,10 +55,17 @@ import {
 import { initBookmarksPanel, updateBookmarkBadge } from './src/bookmarks.js';
 
 // Chat Module
-import { initChatSystem, loadChatStateForRepo, resetChatState } from './src/chat.js';
+import { initChatSystem, loadChatStateForRepo, resetChatState, indexRepoCodebaseInBackground } from './src/chat.js';
 
 // Drawer Module
-import { renderDirectoryTreeNodes, bindTreeEvents, scanAndRenderDependencies, initDetailDrawer } from './src/drawer.js';
+import {
+  renderDirectoryTreeNodes,
+  bindTreeEvents,
+  scanAndRenderDependencies,
+  initDetailDrawer,
+  loadDeepDiveDependencies,
+  loadDeepDiveApiSpec
+} from './src/drawer.js';
 
 function esc(t) {
   if (!t) return '';
@@ -120,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabKeyboardNavigation();
     initChatSystem();
     initDetailDrawer();
+    initDeepDiveTabs();
 
     // Catch storage failure events decoupled from storage layer
     window.addEventListener('localstorage-failure', (e) => {
@@ -389,12 +397,19 @@ function initResultsActions() {
         const bookmarksOverlay = document.getElementById('bookmarks-modal-overlay');
         if (bookmarksOverlay) bookmarksOverlay.classList.remove('open');
         
-        const repoFullName = ddBtn.dataset.repoName;
-        const repoId = ddBtn.dataset.repoId;
-        
         setActiveDeepDiveRepo({ fullName: repoFullName, id: repoId });
         if (ddTitle) ddTitle.textContent = `🧠 Deep Dive: ${repoFullName.split('/')[1]}`;
         if (ddControls) ddControls.style.display = 'flex';
+        
+        // Reset tabs to default (Report)
+        document.querySelectorAll('#deep-dive-modal .dd-tab-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.id === 'dd-tab-report');
+        });
+        document.querySelectorAll('#deep-dive-modal .dd-pane').forEach(pane => {
+          const isReport = pane.id === 'dd-pane-report';
+          pane.style.display = isReport ? '' : 'none';
+          pane.classList.toggle('active', isReport);
+        });
         
         if (ddModal) ddModal.classList.add('open');
         
@@ -608,6 +623,10 @@ async function runDeepDiveGeneration(repoFullName, repoId) {
     const tree = await fetchRepoTree(repoFullName, token, defaultBranch, signal);
     if (thisDeepDiveId !== state.currentDeepDiveId) return;
     setActiveFileTree(tree);
+    
+    if (tree.length) {
+      indexRepoCodebaseInBackground(repoFullName, tree);
+    }
     
     // Render Collapsible Accessible Tree
     const treeContainer = document.getElementById('deep-dive-sidebar-tree');
@@ -1004,5 +1023,33 @@ function initHistoryDropdown() {
     if (!btn.contains(e.target) && !dd.contains(e.target)) {
       dd.classList.remove('open');
     }
+  });
+}
+
+function initDeepDiveTabs() {
+  const tabs = document.querySelectorAll('#deep-dive-modal .dd-tab-btn');
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      const paneId = tab.dataset.pane;
+      const panes = document.querySelectorAll('#deep-dive-modal .dd-pane');
+      panes.forEach(pane => {
+        const isTarget = pane.id === paneId;
+        pane.classList.toggle('active', isTarget);
+        pane.style.display = isTarget ? '' : 'none';
+      });
+      
+      const repoFullName = state.activeDeepDiveRepo ? state.activeDeepDiveRepo.fullName : '';
+      const token = getGithubToken();
+      const defaultBranch = state.activeDeepDiveRepo ? (state.activeDeepDiveRepo.defaultBranch || 'main') : 'main';
+      
+      if (paneId === 'dd-pane-deps' && repoFullName) {
+        loadDeepDiveDependencies(repoFullName, state.activeFileTree, token, defaultBranch);
+      } else if (paneId === 'dd-pane-api' && repoFullName) {
+        loadDeepDiveApiSpec(repoFullName, state.activeFileTree, token, defaultBranch);
+      }
+    };
   });
 }

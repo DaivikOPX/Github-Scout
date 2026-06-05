@@ -431,3 +431,245 @@ export function extractSignificantKeywords(text) {
   return result;
 }
 
+/**
+ * Splits source file contents into overlapping character segments for analysis.
+ */
+export function chunkFileContent(filePath, content, chunkSize = 1000, overlap = 200) {
+  const chunks = [];
+  if (!content) return chunks;
+
+  let start = 0;
+  let idx = 0;
+  while (start < content.length) {
+    const end = Math.min(start + chunkSize, content.length);
+    const text = content.substring(start, end);
+    chunks.push({
+      id: `${filePath}#chunk${idx}`,
+      filePath,
+      content: text,
+      startLine: content.substring(0, start).split('\n').length,
+      endLine: content.substring(0, end).split('\n').length
+    });
+    
+    idx++;
+    start += (chunkSize - overlap);
+    if (start >= content.length || end === content.length) break;
+  }
+  return chunks;
+}
+
+/**
+ * Computes TF-IDF cosine similarity between a developer query and code chunks,
+ * returning the top K most relevant chunks.
+ */
+export function computeTfidfSimilarity(query, chunks, topK = 3) {
+  if (!query || !chunks || chunks.length === 0) return [];
+
+  const STOP_WORDS = new Set([
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
+    'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
+    'could', 'couldnt', 'did', 'didnt', 'do', 'does', 'doesnt', 'doing', 'dont', 'down', 'during', 'each', 'few',
+    'for', 'from', 'further', 'had', 'hadnt', 'has', 'hasnt', 'have', 'havent', 'having', 'he', 'hed', 'hell',
+    'hes', 'her', 'here', 'heres', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'hows', 'i', 'id', 'ill',
+    'im', 'ive', 'if', 'in', 'into', 'is', 'isnt', 'it', 'its', 'itself', 'lets', 'me', 'more', 'most', 'mustnt',
+    'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+    'ourselves', 'out', 'over', 'own', 'same', 'shant', 'she', 'shed', 'shell', 'shes', 'should', 'shouldnt', 'so',
+    'some', 'such', 'than', 'that', 'thats', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
+    'theres', 'these', 'they', 'theyd', 'theyll', 'theyre', 'theyve', 'this', 'those', 'through', 'to', 'too',
+    'under', 'until', 'up', 'very', 'was', 'wasnt', 'we', 'wed', 'well', 'were', 'werent', 'what', 'whats',
+    'when', 'whens', 'where', 'wheres', 'which', 'while', 'who', 'whos', 'whom', 'why', 'whys', 'with', 'wont',
+    'would', 'wouldnt', 'you', 'youd', 'youll', 'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves'
+  ]);
+
+  function tokenize(text) {
+    const splitCamel = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return splitCamel.toLowerCase()
+      .replace(/[^\w\s-]/g, ' ')
+      .split(/[\s_]+/)
+      .map(w => w.trim())
+      .filter(w => w.length >= 2 && !STOP_WORDS.has(w));
+  }
+
+  const queryTokens = tokenize(query);
+  if (queryTokens.length === 0) return [];
+
+  const numDocs = chunks.length;
+  const docTokens = chunks.map(c => tokenize(c.content || ''));
+  
+  // Calculate Document Frequency (DF) for all terms
+  const df = {};
+  docTokens.forEach(tokens => {
+    const unique = new Set(tokens);
+    unique.forEach(t => {
+      df[t] = (df[t] || 0) + 1;
+    });
+  });
+
+  // Calculate Inverse Document Frequency (IDF)
+  const idf = {};
+  Object.keys(df).forEach(t => {
+    idf[t] = Math.log(1 + numDocs / df[t]);
+  });
+
+  // Query IDF term weight
+  const queryWeights = {};
+  queryTokens.forEach(t => {
+    queryWeights[t] = (queryWeights[t] || 0) + 1;
+  });
+  Object.keys(queryWeights).forEach(t => {
+    queryWeights[t] = queryWeights[t] * (idf[t] || 1);
+  });
+
+  // Calculate similarity for each chunk document
+  const scoredChunks = chunks.map((chunk, docIdx) => {
+    const tokens = docTokens[docIdx];
+    const tf = {};
+    tokens.forEach(t => {
+      tf[t] = (tf[t] || 0) + 1;
+    });
+
+    let dotProduct = 0;
+    let queryNormSq = 0;
+    let docNormSq = 0;
+
+    const checkedTerms = new Set([...queryTokens, ...tokens]);
+    checkedTerms.forEach(t => {
+      const qVal = queryWeights[t] || 0;
+      const dVal = (tf[t] || 0) * (idf[t] || 1);
+      
+      dotProduct += qVal * dVal;
+      queryNormSq += qVal * qVal;
+      docNormSq += dVal * dVal;
+    });
+
+    const queryNorm = Math.sqrt(queryNormSq);
+    const docNorm = Math.sqrt(docNormSq);
+    const score = (queryNorm > 0 && docNorm > 0) ? (dotProduct / (queryNorm * docNorm)) : 0;
+
+    return { chunk, score };
+  });
+
+  // Sort and return top K
+  return scoredChunks
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(item => item.chunk);
+}
+
+/**
+ * Parses lockfiles to extract nested/transitive dependency structures.
+ * Returns { nodes: { [name]: version }, edges: [ { from, to } ] }
+ */
+export function parseLockfileDependencies(fileName, content) {
+  const nodes = {};
+  const edges = [];
+  const name = (fileName || '').toLowerCase();
+  
+  if (!content) return { nodes, edges };
+
+  if (name.endsWith('package-lock.json')) {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.packages) {
+        Object.entries(parsed.packages).forEach(([path, pkgInfo]) => {
+          if (!path || path === "") return;
+          const pkgName = path.replace(/^node_modules\//, '');
+          if (!pkgName) return;
+          nodes[pkgName] = pkgInfo.version || 'unknown';
+          
+          if (pkgInfo.dependencies) {
+            Object.keys(pkgInfo.dependencies).forEach(depName => {
+              edges.push({ from: pkgName, to: depName });
+            });
+          }
+        });
+      } else if (parsed.dependencies) {
+        // v1 package-lock
+        const walk = (depsMap) => {
+          Object.entries(depsMap).forEach(([pkgName, pkgInfo]) => {
+            nodes[pkgName] = pkgInfo.version || 'unknown';
+            if (pkgInfo.requires) {
+              Object.keys(pkgInfo.requires).forEach(depName => {
+                edges.push({ from: pkgName, to: depName });
+              });
+            }
+            if (pkgInfo.dependencies) {
+              walk(pkgInfo.dependencies);
+            }
+          });
+        };
+        walk(parsed.dependencies);
+      }
+    } catch (e) {
+      console.warn('Failed to parse package-lock.json:', e);
+    }
+  } else if (name.endsWith('cargo.lock')) {
+    try {
+      const lines = content.split('\n');
+      let currentPkg = null;
+      lines.forEach(line => {
+        const clean = line.trim();
+        if (clean.startsWith('[[package]]')) {
+          if (currentPkg && currentPkg.name) {
+            nodes[currentPkg.name] = currentPkg.version || 'unknown';
+            if (currentPkg.dependencies) {
+              currentPkg.dependencies.forEach(dep => {
+                edges.push({ from: currentPkg.name, to: dep });
+              });
+            }
+          }
+          currentPkg = {};
+        } else if (currentPkg) {
+          if (clean.startsWith('name =')) {
+            const match = clean.match(/name\s*=\s*["']([^"']+)["']/);
+            if (match) currentPkg.name = match[1];
+          } else if (clean.startsWith('version =')) {
+            const match = clean.match(/version\s*=\s*["']([^"']+)["']/);
+            if (match) currentPkg.version = match[1];
+          } else if (clean.startsWith('dependencies =')) {
+            currentPkg.inDeps = true;
+            currentPkg.dependencies = [];
+          } else if (currentPkg.inDeps) {
+            if (clean.startsWith(']')) {
+              currentPkg.inDeps = false;
+            } else {
+              const match = clean.match(/["']([^"']+)["']/);
+              if (match) {
+                // Cargo lock dependency values might contain other fields, split on space
+                const depName = match[1].split(' ')[0];
+                currentPkg.dependencies.push(depName);
+              }
+            }
+          }
+          
+          if (clean === "" || clean.startsWith('[')) {
+            if (currentPkg.name) {
+              nodes[currentPkg.name] = currentPkg.version || 'unknown';
+              if (currentPkg.dependencies) {
+                currentPkg.dependencies.forEach(dep => {
+                  edges.push({ from: currentPkg.name, to: dep });
+                });
+              }
+            }
+            currentPkg = clean.startsWith('[[package]]') ? {} : null;
+          }
+        }
+      });
+      if (currentPkg && currentPkg.name) {
+        nodes[currentPkg.name] = currentPkg.version || 'unknown';
+        if (currentPkg.dependencies) {
+          currentPkg.dependencies.forEach(dep => {
+            edges.push({ from: currentPkg.name, to: dep });
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse Cargo.lock:', e);
+    }
+  }
+  
+  return { nodes, edges };
+}
+
+

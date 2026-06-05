@@ -332,6 +332,12 @@
                 <button class="dd-tab-btn active" id="dd-tab-report" data-pane="dd-pane-report">
                   <span>📄</span> Report
                 </button>
+                <button class="dd-tab-btn" id="dd-tab-deps" data-pane="dd-pane-deps">
+                  <span>📦</span> Dependency Auditor
+                </button>
+                <button class="dd-tab-btn" id="dd-tab-api" data-pane="dd-pane-api">
+                  <span>📡</span> API Explorer
+                </button>
                 <button class="dd-tab-btn" id="dd-tab-chat" data-pane="dd-pane-chat">
                   <span>💬</span> Ask Architect
                 </button>
@@ -339,6 +345,72 @@
               
               <div class="dd-pane active" id="dd-pane-report">
                 <div id="deep-dive-content" class="report-content"></div>
+              </div>
+
+              <div class="dd-pane" id="dd-pane-deps" style="display: none; padding: 2.5rem 3rem 4rem 3rem; overflow-y: auto;">
+                <div class="dd-deps-layout" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                  <div class="dd-deps-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <h4 class="gradient-text" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem;">📦 Dependency Graph & Security Auditor</h4>
+                      <p style="font-size: 0.85rem; color: var(--text-muted);">Transitive dependency trees audited against public CVE security vulnerability databases.</p>
+                    </div>
+                  </div>
+                  <div id="dd-deps-loading" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <div class="radar-pulse" style="margin: 0 auto 1rem;"></div>
+                    <span>Auditing codebase dependencies...</span>
+                  </div>
+                  <div id="dd-deps-content" style="display: none; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Vulnerability alerts summary -->
+                    <div id="dd-deps-summary" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+                    
+                    <!-- Graph & Details Split Layout -->
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+                      <div class="mermaid-container" style="flex: 2 1 500px; min-width: 300px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; justify-content: center; overflow: auto; min-height: 400px; max-height: 600px;">
+                        <pre class="mermaid" id="dd-deps-graph-mermaid" style="background: transparent; border: none; width: 100%;"></pre>
+                      </div>
+                      <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
+                          <h5 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-secondary);">🔍 Vulnerability Details</h5>
+                          <div id="dd-deps-vuln-details" style="font-size: 0.85rem; color: var(--text-muted); max-height: 450px; overflow-y: auto; line-height: 1.5;">
+                            Click on a highlighted package in the dependency tree to view CVE security advisories.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dd-pane" id="dd-pane-api" style="display: none; padding: 2.5rem 3rem 4rem 3rem; overflow-y: auto;">
+                <div class="dd-api-layout" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                  <div class="dd-api-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <h4 class="gradient-text" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem;">📡 API Route Explorer & Spec Generator</h4>
+                      <p style="font-size: 0.85rem; color: var(--text-muted);">AI scans route files to synthesize endpoints and render an interactive test client console.</p>
+                    </div>
+                  </div>
+                  <div id="dd-api-loading" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <div class="radar-pulse" style="margin: 0 auto 1rem;"></div>
+                    <span>Scanning codebase routing folders...</span>
+                  </div>
+                  <div id="dd-api-content" style="display: none; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Spec details -->
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+                      <!-- Route Endpoint List -->
+                      <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 0.75rem; max-height: 600px; overflow-y: auto; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; padding: 1rem;" id="dd-api-route-list">
+                      </div>
+                      
+                      <!-- Interactive Test Client Form -->
+                      <div style="flex: 1.5 1 400px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;" id="dd-api-tester">
+                        <div style="color: var(--text-muted); text-align: center; padding: 3rem 1rem;">
+                          <div style="font-size: 2rem; margin-bottom: 1rem;">📡</div>
+                          <h5>REST Client Console</h5>
+                          <p style="font-size: 0.85rem;">Select an API endpoint from the route list to run mock execution requests.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div class="dd-pane" id="dd-pane-chat" style="display: none;">

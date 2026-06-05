@@ -616,3 +616,144 @@ Include these clear sections:
 
   return await callAI(provider, apiKey, model, prompt, false, signal);
 }
+
+/**
+ * Prompts the AI model to grade compared repositories on our 5 core metrics:
+ * Learning Curve, API Ergonomics, Maintenance Velocity, Efficiency, and Production Reliability.
+ */
+export async function generateComparisonGrades(repos, options = {}) {
+  const { provider = 'groq', apiKey = '', model = '' } = options;
+  if (provider !== 'ollama' && !apiKey) throw new Error(`${provider} API key required.`);
+  
+  const reposData = repos.map(r => ({
+    name: r.name,
+    fullName: r.fullName,
+    description: r.description,
+    stars: r.stars,
+    forks: r.forks,
+    openIssues: r.openIssues,
+    size: r.size,
+    language: r.language,
+    license: r.license,
+    daysSinceUpdate: r.daysSinceUpdate
+  }));
+
+  const prompt = `You are a Senior Systems Architect. You are comparing several open-source repositories to score them for developer readiness.
+Here is the JSON metadata for the repositories being compared:
+${JSON.stringify(reposData, null, 2)}
+
+Your task is to analyze these repositories and score each of them from 1 to 10 (where 10 is the absolute best, and 1 is the worst) across these 5 specific dimensions:
+1. Learning Curve: How easy is it for a developer to set up, understand, and start using this repository?
+2. API Ergonomics: How clean, modern, and developer-friendly are its API endpoints, design patterns, and interfaces?
+3. Maintenance Velocity: How active are the maintainers? Score higher for low daysSinceUpdate, high star-to-fork ratio, and healthy issue resolution velocity.
+4. Efficiency: Is the package bloated? Score higher for lightweight repositories (smaller size) and optimized architecture.
+5. Production Reliability: Is it safe for production? Score higher for permissive licensing (like MIT, Apache-2.0), stable release history, and security readiness.
+
+OUTPUT FORMAT: You must respond ONLY with a valid JSON array of objects, where each object represents a repository and has the following keys:
+- name: (matching the repository's short name)
+- learningCurve: (number 1-10)
+- apiErgonomics: (number 1-10)
+- maintenanceVelocity: (number 1-10)
+- efficiency: (number 1-10)
+- productionReliability: (number 1-10)
+
+Example response:
+[
+  {
+    "name": "repo-a",
+    "learningCurve": 9,
+    "apiErgonomics": 8,
+    "maintenanceVelocity": 7,
+    "efficiency": 9,
+    "productionReliability": 8
+  }
+]
+
+Do not include any conversational text or markdown formatting tags. Just output the raw JSON array.`;
+
+  try {
+    const content = await callAI(provider, apiKey, model, prompt, true);
+    let jsonStr = content.trim();
+    
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim();
+    } else {
+      const arrayMatch = jsonStr.match(/\[\s*[\s\S]*\s*\]/);
+      if (arrayMatch) {
+        jsonStr = arrayMatch[0];
+      }
+    }
+    
+    const parsed = JSON.parse(jsonStr);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error('generateComparisonGrades failed:', err);
+    // Return flat default scores on failure
+    return repos.map(r => ({
+      name: r.name,
+      learningCurve: 5,
+      apiErgonomics: 5,
+      maintenanceVelocity: 5,
+      efficiency: 5,
+      productionReliability: 5
+    }));
+  }
+}
+
+/**
+ * Scans the list of route files and generates a structured JSON OpenAPI-style route spec.
+ */
+export async function generateRouteSpec(repoFullName, routingFiles, options = {}) {
+  const { provider = 'groq', apiKey = '', model = '' } = options;
+  if (provider !== 'ollama' && !apiKey) throw new Error(`${provider} API key required.`);
+
+  const prompt = `You are a Systems Architect. You are scanning the routing configuration of the repository "${repoFullName}".
+Here are the paths of the route files identified in the repository:
+${routingFiles.join('\n')}
+
+Analyze these routing paths and estimate the main API endpoints provided by this repository. 
+Return a JSON array of route objects, where each route object has the following keys:
+- path: (string, e.g. "/api/v1/users")
+- method: (string, e.g. "GET", "POST", "PUT", "DELETE")
+- description: (string, a short explanation of what this endpoint does)
+- params: (array of objects, where each object has: "name", "type" like "query|path|body", "required" boolean, "description")
+- response: (string, description of the response format)
+
+If no routes can be identified or if the files don't suggest specific endpoints, synthesize 3 plausible API endpoints that this type of repository would expose based on its name and file list.
+
+Return ONLY a valid JSON array of objects. Do not include markdown formatting or conversational text.`;
+
+  try {
+    const content = await callAI(provider, apiKey, model, prompt, true);
+    let jsonStr = content.trim();
+    
+    // Attempt to extract from markdown code blocks first
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim();
+    } else {
+      // Fallback: look for standard JSON array boundaries
+      const arrayMatch = jsonStr.match(/\[\s*[\s\S]*\s*\]/);
+      if (arrayMatch) {
+        jsonStr = arrayMatch[0];
+      }
+    }
+    
+    const parsed = JSON.parse(jsonStr);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error('generateRouteSpec failed:', err);
+    // Return standard fallback spec
+    return [
+      {
+        path: '/api/health',
+        method: 'GET',
+        description: 'Get service health status',
+        params: [],
+        response: '{"status": "ok"}'
+      }
+    ];
+  }
+}
+

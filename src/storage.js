@@ -427,4 +427,87 @@ export function moveBookmarkToCollection(id, collectionName) {
   safeSetItem(K.BOOKMARKS, JSON.stringify(updated));
 }
 
+/**
+ * Opens browser-based IndexedDB for Git Scout file chunks caching.
+ */
+export function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      return reject(new Error('IndexedDB is not supported'));
+    }
+    const request = indexedDB.open('gitscout_chunks_db', 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('file_chunks')) {
+        db.createObjectStore('file_chunks', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Saves file segments (chunks) to local IndexedDB store.
+ */
+export async function saveRepoChunks(repoFullName, chunks) {
+  try {
+    const db = await openIndexedDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('file_chunks', 'readwrite');
+      const store = tx.objectStore('file_chunks');
+      
+      chunks.forEach(c => {
+        store.put({
+          id: c.id,
+          repoFullName,
+          filePath: c.filePath,
+          content: c.content,
+          startLine: c.startLine,
+          endLine: c.endLine
+        });
+      });
+      
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  } catch (err) {
+    console.error('Failed to save repo chunks to IndexedDB:', err);
+    return false;
+  }
+}
+
+/**
+ * Retrieves cached file segments for a given repository.
+ */
+export async function getRepoChunks(repoFullName) {
+  try {
+    const db = await openIndexedDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('file_chunks', 'readonly');
+      const store = tx.objectStore('file_chunks');
+      const results = [];
+      
+      const request = store.openCursor();
+      request.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (cursor.value.repoFullName === repoFullName) {
+            results.push(cursor.value);
+          }
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      
+      request.onerror = (e) => reject(e.target.error);
+    });
+  } catch (err) {
+    console.error('Failed to get repo chunks from IndexedDB:', err);
+    return [];
+  }
+}
+
+
 

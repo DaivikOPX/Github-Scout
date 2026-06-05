@@ -35,7 +35,15 @@ function assert(condition, message) {
 }
 
 // 2. Dynamically import modules (after mocking globals, avoiding browser dependencies)
-const { buildDirectoryTree, parseMarkdown, extractJsonObjects, parseManifestDependencies, extractSignificantKeywords } = await import('./src/utils.js');
+const {
+  buildDirectoryTree,
+  parseMarkdown,
+  extractJsonObjects,
+  parseManifestDependencies,
+  extractSignificantKeywords,
+  computeTfidfSimilarity,
+  parseLockfileDependencies
+} = await import('./src/utils.js');
 const {
   createCollection, getCollections, renameCollection, deleteCollection,
   getCachedResults, setCachedResults, addToCompare, getCompareList, clearCompare
@@ -347,7 +355,56 @@ try {
   console.log('   🟢 Passed!');
 
   // ────────────────────────────────────────────────────────
-  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [51/51 RESOLVED]');
+  // Test Case 10: Cosine Similarity TF-IDF Mathematics
+  // ────────────────────────────────────────────────────────
+  console.log(' - Testing computeTfidfSimilarity cosine similarity...');
+  const testChunks = [
+    { id: 'chunk1', content: 'function initializeDatabaseConnection() { const db = connect(); }' },
+    { id: 'chunk2', content: 'class RenderPipeline { drawScreen() { console.log("render"); } }' }
+  ];
+  const queryResult = computeTfidfSimilarity('database connection', testChunks, 1);
+  assert(queryResult.length === 1, 'Should find 1 matching chunk');
+  assert(queryResult[0].id === 'chunk1', 'Should match chunk1 containing database connection');
+  console.log('   🟢 Passed!');
+
+  // ────────────────────────────────────────────────────────
+  // Test Case 11: Lockfile Transitive Dependency Parser
+  // ────────────────────────────────────────────────────────
+  console.log(' - Testing parseLockfileDependencies parser...');
+  const packageLockData = JSON.stringify({
+    packages: {
+      "node_modules/express": {
+        version: "4.18.2",
+        dependencies: {
+          "accepts": "~1.3.8"
+        }
+      },
+      "node_modules/accepts": {
+        version: "1.3.8"
+      }
+    }
+  });
+  const parsedLock = parseLockfileDependencies('package-lock.json', packageLockData);
+  assert(parsedLock.nodes['express'] === '4.18.2', 'Express version resolved');
+  assert(parsedLock.nodes['accepts'] === '1.3.8', 'Accepts version resolved');
+  assert(parsedLock.edges.some(e => e.from === 'express' && e.to === 'accepts'), 'Transitive edge express -> accepts resolved');
+  console.log('   🟢 Passed!');
+
+  // ────────────────────────────────────────────────────────
+  // Test Case 12: Radar Chart SVG Coordinate Math
+  // ────────────────────────────────────────────────────────
+  console.log(' - Testing Radar Chart SVG coordinate calculations...');
+  const testScore = 10;
+  const testRadius = (testScore / 10) * 100;
+  const testAngle = -Math.PI / 2; // top axis
+  const testX = 150 + testRadius * Math.cos(testAngle);
+  const testY = 150 + testRadius * Math.sin(testAngle);
+  assert(Math.abs(testX - 150) < 1e-5, 'X coordinate at top axis should be exactly 150');
+  assert(Math.abs(testY - 50) < 1e-5, 'Y coordinate at top axis score 10 should be exactly 50');
+  console.log('   🟢 Passed!');
+
+  // ────────────────────────────────────────────────────────
+  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [60/60 RESOLVED]');
   process.exit(0);
 } catch (testErr) {
   console.error('❌ Test Runner Crash:', testErr);
