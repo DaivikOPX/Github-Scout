@@ -13,7 +13,10 @@ export const DEFAULT_MODELS = {
   groq: 'llama-3.3-70b-versatile',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-sonnet-latest',
-  gemini: 'gemini-1.5-flash'
+  gemini: 'gemini-1.5-flash',
+  grok: 'grok-2',
+  huggingface: 'meta-llama/Llama-3-8B-Instruct',
+  openrouter: 'meta-llama/llama-3-8b-instruct:free'
 };
 
 /**
@@ -40,10 +43,26 @@ async function callAI(provider, apiKey, model, prompt, isJson, signal) {
 
   const currentModel = model || DEFAULT_MODELS[provider];
 
-  if (provider === 'ollama' || provider === 'groq' || provider === 'openai') {
-    url = provider === 'ollama' ? OLLAMA_API : (provider === 'groq' ? GROQ_API : OPENAI_API);
+  if (provider === 'ollama' || provider === 'groq' || provider === 'openai' || provider === 'grok' || provider === 'huggingface' || provider === 'openrouter') {
+    if (provider === 'ollama') {
+      url = OLLAMA_API;
+    } else if (provider === 'groq') {
+      url = GROQ_API;
+    } else if (provider === 'openai') {
+      url = OPENAI_API;
+    } else if (provider === 'grok') {
+      url = 'https://api.x.ai/v1/chat/completions';
+    } else if (provider === 'huggingface') {
+      url = 'https://api-inference.huggingface.co/v1/chat/completions';
+    } else if (provider === 'openrouter') {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+    }
     headers = { 'Content-Type': 'application/json' };
     if (provider !== 'ollama') headers['Authorization'] = `Bearer ${apiKey}`;
+    if (provider === 'openrouter') {
+      headers['HTTP-Referer'] = 'https://github.com/DaivikOPX/Github-Scout';
+      headers['X-Title'] = 'Git Scout';
+    }
     body = {
       model: currentModel,
       messages: [{ role: 'user', content: prompt }],
@@ -445,10 +464,26 @@ YOUR MISSION:
   let url, headers, body, extractContent;
   const currentModel = model || DEFAULT_MODELS[provider];
 
-  if (provider === 'ollama' || provider === 'groq' || provider === 'openai') {
-    url = provider === 'ollama' ? OLLAMA_API : (provider === 'groq' ? GROQ_API : OPENAI_API);
+  if (provider === 'ollama' || provider === 'groq' || provider === 'openai' || provider === 'grok' || provider === 'huggingface' || provider === 'openrouter') {
+    if (provider === 'ollama') {
+      url = OLLAMA_API;
+    } else if (provider === 'groq') {
+      url = GROQ_API;
+    } else if (provider === 'openai') {
+      url = OPENAI_API;
+    } else if (provider === 'grok') {
+      url = 'https://api.x.ai/v1/chat/completions';
+    } else if (provider === 'huggingface') {
+      url = 'https://api-inference.huggingface.co/v1/chat/completions';
+    } else if (provider === 'openrouter') {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+    }
     headers = { 'Content-Type': 'application/json' };
     if (provider !== 'ollama') headers['Authorization'] = `Bearer ${apiKey}`;
+    if (provider === 'openrouter') {
+      headers['HTTP-Referer'] = 'https://github.com/DaivikOPX/Github-Scout';
+      headers['X-Title'] = 'Git Scout';
+    }
     
     body = {
       model: currentModel,

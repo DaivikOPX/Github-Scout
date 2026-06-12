@@ -116,6 +116,21 @@
             <span class="radio-label">✨ Google Gemini</span>
             <span class="radio-desc">Gemini 1.5 Pro/Flash</span>
           </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="grok" id="provider-grok" />
+            <span class="radio-label">🛸 xAI (Grok)</span>
+            <span class="radio-desc">Grok-2 & Grok-beta</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="huggingface" id="provider-huggingface" />
+            <span class="radio-label">🤗 Hugging Face</span>
+            <span class="radio-desc">Llama-3, Qwen, Mistral</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="ai-provider" value="openrouter" id="provider-openrouter" />
+            <span class="radio-label">🔌 OpenRouter</span>
+            <span class="radio-desc">All models aggregated</span>
+          </label>
         </div>
       </div>
 
@@ -134,7 +149,7 @@
       <div class="setting-group" id="groq-settings" style="display:none">
         <label class="setting-label">Groq API Key <span class="setting-hint">(<a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">get free key</a>)</span></label>
         <input type="password" id="groq-key-input" class="setting-input" placeholder="gsk_..." autocomplete="off" />
-        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
         <input type="text" id="groq-model-input" class="setting-input" list="groq-models" placeholder="meta-llama/llama-4-scout-17b-16e-instruct" />
         <datalist id="groq-models">
           <option value="meta-llama/llama-4-scout-17b-16e-instruct">
@@ -148,7 +163,7 @@
       <div class="setting-group" id="openai-settings" style="display:none">
         <label class="setting-label">OpenAI API Key</label>
         <input type="password" id="openai-key-input" class="setting-input" placeholder="sk-proj-..." autocomplete="off" />
-        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
         <input type="text" id="openai-model-input" class="setting-input" list="openai-models" placeholder="gpt-5.5" />
         <datalist id="openai-models">
           <option value="gpt-5.5">
@@ -162,7 +177,7 @@
       <div class="setting-group" id="anthropic-settings" style="display:none">
         <label class="setting-label">Anthropic API Key</label>
         <input type="password" id="anthropic-key-input" class="setting-input" placeholder="sk-ant-..." autocomplete="off" />
-        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
         <input type="text" id="anthropic-model-input" class="setting-input" list="anthropic-models" placeholder="claude-sonnet-4-6" />
         <datalist id="anthropic-models">
           <option value="claude-opus-4-7">
@@ -176,7 +191,7 @@
       <div class="setting-group" id="gemini-settings" style="display:none">
         <label class="setting-label">Gemini API Key</label>
         <input type="password" id="gemini-key-input" class="setting-input" placeholder="AIzaSy..." autocomplete="off" />
-        <label class="setting-label" style="margin-top:0.75rem">Model Name</label>
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
         <input type="text" id="gemini-model-input" class="setting-input" list="gemini-models" placeholder="gemini-2.5-flash" />
         <datalist id="gemini-models">
           <option value="gemini-3.5-flash">
@@ -184,6 +199,42 @@
           <option value="gemini-2.5-pro">
           <option value="gemini-2.5-flash">
           <option value="gemini-2.5-flash-lite">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="grok-settings" style="display:none">
+        <label class="setting-label">xAI (Grok) API Key <span class="setting-hint">(<a href="https://console.x.ai" target="_blank" rel="noopener noreferrer">get key</a>)</span></label>
+        <input type="password" id="grok-key-input" class="setting-input" placeholder="xai-..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
+        <input type="text" id="grok-model-input" class="setting-input" list="grok-models" placeholder="grok-2" />
+        <datalist id="grok-models">
+          <option value="grok-2">
+          <option value="grok-beta">
+          <option value="grok-vision-beta">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="huggingface-settings" style="display:none">
+        <label class="setting-label">Hugging Face API Key/Token <span class="setting-hint">(<a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">get key</a>)</span></label>
+        <input type="password" id="huggingface-key-input" class="setting-input" placeholder="hf_..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name / Endpoint ID <span class="setting-hint">(select or type custom)</span></label>
+        <input type="text" id="huggingface-model-input" class="setting-input" list="huggingface-models" placeholder="meta-llama/Llama-3-8B-Instruct" />
+        <datalist id="huggingface-models">
+          <option value="meta-llama/Llama-3-8B-Instruct">
+          <option value="Qwen/Qwen2.5-72B-Instruct">
+          <option value="mistralai/Mixtral-8x7B-Instruct-v0.1">
+        </datalist>
+      </div>
+
+      <div class="setting-group" id="openrouter-settings" style="display:none">
+        <label class="setting-label">OpenRouter API Key <span class="setting-hint">(<a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">get key</a>)</span></label>
+        <input type="password" id="openrouter-key-input" class="setting-input" placeholder="sk-or-..." autocomplete="off" />
+        <label class="setting-label" style="margin-top:0.75rem">Model Name <span class="setting-hint">(select or type custom)</span></label>
+        <input type="text" id="openrouter-model-input" class="setting-input" list="openrouter-models" placeholder="meta-llama/llama-3-8b-instruct:free" />
+        <datalist id="openrouter-models">
+          <option value="meta-llama/llama-3-8b-instruct:free">
+          <option value="mistralai/mistral-7b-instruct:free">
+          <option value="google/gemini-2.5-pro">
         </datalist>
       </div>
 

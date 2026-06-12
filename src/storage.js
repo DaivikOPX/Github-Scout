@@ -18,6 +18,12 @@ const K = {
   OPENAI_MODEL: 'rr_openai_model',
   ANTHROPIC_MODEL: 'rr_anthropic_model',
   GEMINI_MODEL: 'rr_gemini_model',
+  GROK_KEY: 'rr_grok_key',
+  GROK_MODEL: 'rr_grok_model',
+  HF_KEY: 'rr_hf_key',
+  HF_MODEL: 'rr_hf_model',
+  OPENROUTER_KEY: 'rr_openrouter_key',
+  OPENROUTER_MODEL: 'rr_openrouter_model',
   CACHE: 'rr_search_cache',
   COMPARE_LIST: 'rr_compare_list',
   LIKES: 'rr_likes',
@@ -96,6 +102,18 @@ export const getAnthropicModel = () => safeGetItem(K.ANTHROPIC_MODEL);
 export const setAnthropicModel = (v) => safeSetItem(K.ANTHROPIC_MODEL, v);
 export const getGeminiModel = () => safeGetItem(K.GEMINI_MODEL);
 export const setGeminiModel = (v) => safeSetItem(K.GEMINI_MODEL, v);
+export const getGrokKey = () => safeGetItem(K.GROK_KEY);
+export const setGrokKey = (v) => safeSetItem(K.GROK_KEY, v.trim());
+export const getGrokModel = () => safeGetItem(K.GROK_MODEL);
+export const setGrokModel = (v) => safeSetItem(K.GROK_MODEL, v);
+export const getHfKey = () => safeGetItem(K.HF_KEY);
+export const setHfKey = (v) => safeSetItem(K.HF_KEY, v.trim());
+export const getHfModel = () => safeGetItem(K.HF_MODEL);
+export const setHfModel = (v) => safeSetItem(K.HF_MODEL, v);
+export const getOpenrouterKey = () => safeGetItem(K.OPENROUTER_KEY);
+export const setOpenrouterKey = (v) => safeSetItem(K.OPENROUTER_KEY, v.trim());
+export const getOpenrouterModel = () => safeGetItem(K.OPENROUTER_MODEL);
+export const setOpenrouterModel = (v) => safeSetItem(K.OPENROUTER_MODEL, v);
 
 export function getSearchHistory() {
   try {

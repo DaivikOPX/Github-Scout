@@ -12,6 +12,9 @@ import {
   getGroqApiKey, setGroqApiKey, getGithubToken, setGithubToken, getGroqModel, setGroqModel,
   getOpenAiKey, setOpenAiKey, getAnthropicKey, setAnthropicKey, getGeminiKey, setGeminiKey,
   getOpenAiModel, setOpenAiModel, getAnthropicModel, setAnthropicModel, getGeminiModel, setGeminiModel,
+  getGrokKey, setGrokKey, getGrokModel, setGrokModel,
+  getHfKey, setHfKey, getHfModel, setHfModel,
+  getOpenrouterKey, setOpenrouterKey, getOpenrouterModel, setOpenrouterModel,
   getAiProvider, setAiProvider, getAiModel, setAiModel,
   getSearchHistory, removeSearchFromHistory,
   getBookmarks, getLikes, getViewed, getCompareList
@@ -708,12 +711,18 @@ async function runDeepDiveGeneration(repoFullName, repoId) {
     if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
     if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
     if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+    if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+    if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+    if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
     
     let apiKey = '';
     if (provider === 'groq') apiKey = getGroqApiKey();
     if (provider === 'openai') apiKey = getOpenAiKey();
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
+    if (provider === 'grok') apiKey = getGrokKey();
+    if (provider === 'huggingface') apiKey = getHfKey();
+    if (provider === 'openrouter') apiKey = getOpenrouterKey();
 
     if (provider !== 'ollama' && !apiKey) {
       showToast(`Add your ${provider} API key in Settings for Deep Dive!`, 'error');
@@ -834,12 +843,18 @@ function initSettingsPanel() {
       const openaiSet = document.getElementById('openai-settings');
       const anthropicSet = document.getElementById('anthropic-settings');
       const geminiSet = document.getElementById('gemini-settings');
+      const grokSet = document.getElementById('grok-settings');
+      const hfSet = document.getElementById('huggingface-settings');
+      const openrouterSet = document.getElementById('openrouter-settings');
       
       if (ollamaSet) ollamaSet.style.display = p === 'ollama' ? '' : 'none';
       if (groqSet) groqSet.style.display = p === 'groq' ? '' : 'none';
       if (openaiSet) openaiSet.style.display = p === 'openai' ? '' : 'none';
       if (anthropicSet) anthropicSet.style.display = p === 'anthropic' ? '' : 'none';
       if (geminiSet) geminiSet.style.display = p === 'gemini' ? '' : 'none';
+      if (grokSet) grokSet.style.display = p === 'grok' ? '' : 'none';
+      if (hfSet) hfSet.style.display = p === 'huggingface' ? '' : 'none';
+      if (openrouterSet) openrouterSet.style.display = p === 'openrouter' ? '' : 'none';
       
       if (p === 'ollama') checkOllama();
     });
@@ -878,6 +893,21 @@ function initSettingsPanel() {
         const gemModel = document.getElementById('gemini-model-input');
         if (gemKey) setGeminiKey(gemKey.value);
         if (gemModel) setGeminiModel(gemModel.value.trim());
+      } else if (provider === 'grok') {
+        const grokKey = document.getElementById('grok-key-input');
+        const grokModel = document.getElementById('grok-model-input');
+        if (grokKey) setGrokKey(grokKey.value);
+        if (grokModel) setGrokModel(grokModel.value.trim());
+      } else if (provider === 'huggingface') {
+        const hfKey = document.getElementById('huggingface-key-input');
+        const hfModel = document.getElementById('huggingface-model-input');
+        if (hfKey) setHfKey(hfKey.value);
+        if (hfModel) setHfModel(hfModel.value.trim());
+      } else if (provider === 'openrouter') {
+        const orKey = document.getElementById('openrouter-key-input');
+        const orModel = document.getElementById('openrouter-model-input');
+        if (orKey) setOpenrouterKey(orKey.value);
+        if (orModel) setOpenrouterModel(orModel.value.trim());
       }
       const ghToken = document.getElementById('github-token-input');
       if (ghToken) setGithubToken(ghToken.value);
@@ -910,12 +940,18 @@ function restoreSettings() {
   const openaiSet = document.getElementById('openai-settings');
   const anthropicSet = document.getElementById('anthropic-settings');
   const geminiSet = document.getElementById('gemini-settings');
+  const grokSet = document.getElementById('grok-settings');
+  const hfSet = document.getElementById('huggingface-settings');
+  const openrouterSet = document.getElementById('openrouter-settings');
 
   if (ollamaSet) ollamaSet.style.display = provider === 'ollama' ? '' : 'none';
   if (groqSet) groqSet.style.display = provider === 'groq' ? '' : 'none';
   if (openaiSet) openaiSet.style.display = provider === 'openai' ? '' : 'none';
   if (anthropicSet) anthropicSet.style.display = provider === 'anthropic' ? '' : 'none';
   if (geminiSet) geminiSet.style.display = provider === 'gemini' ? '' : 'none';
+  if (grokSet) grokSet.style.display = provider === 'grok' ? '' : 'none';
+  if (hfSet) hfSet.style.display = provider === 'huggingface' ? '' : 'none';
+  if (openrouterSet) openrouterSet.style.display = provider === 'openrouter' ? '' : 'none';
 
   const model = getAiModel();
   const oModelInput = document.getElementById('ollama-model-input');
@@ -940,6 +976,21 @@ function restoreSettings() {
   if (geminiKeyInput) geminiKeyInput.value = getGeminiKey();
   const geminiModelInput = document.getElementById('gemini-model-input');
   if (geminiModelInput) geminiModelInput.value = getGeminiModel();
+
+  const grokKeyInput = document.getElementById('grok-key-input');
+  if (grokKeyInput) grokKeyInput.value = getGrokKey();
+  const grokModelInput = document.getElementById('grok-model-input');
+  if (grokModelInput) grokModelInput.value = getGrokModel();
+
+  const hfKeyInput = document.getElementById('huggingface-key-input');
+  if (hfKeyInput) hfKeyInput.value = getHfKey();
+  const hfModelInput = document.getElementById('huggingface-model-input');
+  if (hfModelInput) hfModelInput.value = getHfModel();
+
+  const openrouterKeyInput = document.getElementById('openrouter-key-input');
+  if (openrouterKeyInput) openrouterKeyInput.value = getOpenrouterKey();
+  const openrouterModelInput = document.getElementById('openrouter-model-input');
+  if (openrouterModelInput) openrouterModelInput.value = getOpenrouterModel();
   
   const ghTokenInput = document.getElementById('github-token-input');
   if (ghTokenInput) ghTokenInput.value = getGithubToken();

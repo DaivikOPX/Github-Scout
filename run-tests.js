@@ -46,7 +46,10 @@ const {
 } = await import('./src/utils.js');
 const {
   createCollection, getCollections, renameCollection, deleteCollection,
-  getCachedResults, setCachedResults, addToCompare, getCompareList, clearCompare
+  getCachedResults, setCachedResults, addToCompare, getCompareList, clearCompare,
+  getGrokKey, setGrokKey, getGrokModel, setGrokModel,
+  getHfKey, setHfKey, getHfModel, setHfModel,
+  getOpenrouterKey, setOpenrouterKey, getOpenrouterModel, setOpenrouterModel
 } = await import('./src/storage.js');
 
 try {
@@ -404,7 +407,26 @@ try {
   console.log('   🟢 Passed!');
 
   // ────────────────────────────────────────────────────────
-  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [60/60 RESOLVED]');
+  // Test Case 13: Storage Persistence for Grok, Hugging Face, and OpenRouter
+  // ────────────────────────────────────────────────────────
+  console.log(' - Testing Storage Persistence for Grok, Hugging Face, and OpenRouter...');
+  setGrokKey('  test-grok-key  ');
+  setGrokModel('grok-beta');
+  setHfKey('  test-hf-key  ');
+  setHfModel('Qwen/Qwen2.5-72B-Instruct');
+  setOpenrouterKey('  test-openrouter-key  ');
+  setOpenrouterModel('google/gemini-2.5-pro');
+
+  assert(getGrokKey() === 'test-grok-key', 'Grok key should be trimmed');
+  assert(getGrokModel() === 'grok-beta', 'Grok model should be saved and returned');
+  assert(getHfKey() === 'test-hf-key', 'HF key should be trimmed');
+  assert(getHfModel() === 'Qwen/Qwen2.5-72B-Instruct', 'HF model should be saved and returned');
+  assert(getOpenrouterKey() === 'test-openrouter-key', 'OpenRouter key should be trimmed');
+  assert(getOpenrouterModel() === 'google/gemini-2.5-pro', 'OpenRouter model should be saved and returned');
+  console.log('   🟢 Passed!');
+
+  // ────────────────────────────────────────────────────────
+  console.log('\n🎉 ALL Git Scout automated unit tests completed successfully! [61/61 RESOLVED]');
   process.exit(0);
 } catch (testErr) {
   console.error('❌ Test Runner Crash:', testErr);
