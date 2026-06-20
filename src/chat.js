@@ -279,7 +279,7 @@ export async function indexRepoCodebaseInBackground(repoFullName, fileTree) {
       const inExcluded = EXCLUDED_DIRS.some(dir => lower.includes(`/${dir}/`) || lower.startsWith(`${dir}/`));
       const isLockfile = lower.endsWith('-lock.json') || lower.endsWith('.lock') || lower.endsWith('-lock.yaml');
       return hasExt && !inExcluded && !isLockfile;
-    }).slice(0, 15); // Index up to 15 key source files to stay safe on rate limits
+    }).slice(0, 150); // Index up to 150 key source files to stay safe on rate limits
 
     if (filteredPaths.length === 0) {
       console.log('[Indexer] No primary source files found to index.');

@@ -349,6 +349,9 @@ ${paths}
 
 Provide a brilliant, engaging architecture report formatted as HTML. Do NOT use markdown code blocks (except inside <pre class="mermaid">). Use this structure:
 <div class="deep-dive-report">
+  <h4>💡 Repository Summary</h4>
+  <p>[Provide a clean, engaging summary in simple words of what this repository actually is, what problem it solves, and what it does. Keep it simple and clear.]</p>
+
   <h4>🩺 The Inspector: Repo Vibe Check</h4>
   <p>[Use the Vibe Check Info above to tell the user if the repo is healthy, if people are complaining about bugs, or if it's abandoned.]</p>
 
@@ -394,7 +397,7 @@ Provide a brilliant, engaging architecture report formatted as HTML. Do NOT use 
  * Multi-backend interactive chat about the current repository.
  */
 export async function chatAboutRepo(repoName, fileTree, reportText, messages, options = {}) {
-  const { provider = 'groq', apiKey = '', model = '', signal } = options;
+  const { provider = 'groq', apiKey = '', model = '', signal, codeChunks } = options;
 
   if (provider !== 'ollama' && !apiKey) throw new Error(`${provider} API key required.`);
   if (provider === 'ollama') {
@@ -446,6 +449,12 @@ export async function chatAboutRepo(repoName, fileTree, reportText, messages, op
   }
 
   const paths = activeFileTree.join('\n');
+  let codeContext = '';
+  if (codeChunks && codeChunks.length > 0) {
+    codeContext = `\n\nHere are some relevant codebase snippets for this query:\n` + 
+      codeChunks.map(chunk => `--- File: ${chunk.filePath} (Lines ${chunk.startLine}-${chunk.endLine}) ---\n${chunk.content}`).join('\n\n');
+  }
+
   const systemPrompt = `You are the ultimate GitHub AI Architect and Teacher for the repository "${repoName}".
 The user has generated an AI Deep Dive report and is now conversing with you to ask follow-up questions, request explanations, or seek recommendations.
 
@@ -453,10 +462,10 @@ Here is the repository's file structure (crucial config/source files):
 ${paths}
 
 Here is the generated Deep Dive Architecture Report for reference:
-${activeReportText}
+${activeReportText}${codeContext}
 
 YOUR MISSION:
-- Answer the user's questions about this codebase with deep, accurate technical details based on the file tree and report.
+- Answer the user's questions about this codebase with deep, accurate technical details based on the file tree, report, and provided codebase snippets.
 - Maintain a helpful, inspiring, and professional technical architect tone.
 - Format all code blocks using standard markdown backticks with language tags (e.g. \`\`\`javascript).
 - Maintain absolute context. Keep explanations concise, clear, and highly practical.`;
