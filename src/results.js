@@ -25,11 +25,17 @@ import {
   getOpenAiKey,
   getAnthropicKey,
   getGeminiKey,
+  getGrokKey,
+  getHfKey,
+  getOpenrouterKey,
   getAiModel,
   getGroqModel,
   getOpenAiModel,
   getAnthropicModel,
-  getGeminiModel
+  getGeminiModel,
+  getGrokModel,
+  getHfModel,
+  getOpenrouterModel
 } from './storage.js';
 
 import { generateComparisonGrades, DEFAULT_MODELS } from './ai.js';
@@ -654,12 +660,18 @@ export function showCompareDrawer(container) {
       if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
       if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
       if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+      if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+      if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+      if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
 
       let apiKey = '';
       if (provider === 'groq') apiKey = getGroqApiKey();
       if (provider === 'openai') apiKey = getOpenAiKey();
       if (provider === 'anthropic') apiKey = getAnthropicKey();
       if (provider === 'gemini') apiKey = getGeminiKey();
+      if (provider === 'grok') apiKey = getGrokKey();
+      if (provider === 'huggingface') apiKey = getHfKey();
+      if (provider === 'openrouter') apiKey = getOpenrouterKey();
 
       const grades = await generateComparisonGrades(list, { provider, apiKey, model });
 

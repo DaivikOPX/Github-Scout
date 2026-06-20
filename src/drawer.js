@@ -35,11 +35,17 @@ import {
   getOpenAiKey,
   getAnthropicKey,
   getGeminiKey,
+  getGrokKey,
+  getHfKey,
+  getOpenrouterKey,
   getAiModel,
   getGroqModel,
   getOpenAiModel,
   getAnthropicModel,
-  getGeminiModel
+  getGeminiModel,
+  getGrokModel,
+  getHfModel,
+  getOpenrouterModel
 } from './storage.js';
 
 import {
@@ -194,12 +200,18 @@ export async function triggerFullExplanation(repoFullName, filePath, thisExplain
       if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
       if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
       if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+      if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+      if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+      if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
       
       let apiKey = '';
       if (provider === 'groq') apiKey = getGroqApiKey();
       if (provider === 'openai') apiKey = getOpenAiKey();
       if (provider === 'anthropic') apiKey = getAnthropicKey();
       if (provider === 'gemini') apiKey = getGeminiKey();
+      if (provider === 'grok') apiKey = getGrokKey();
+      if (provider === 'huggingface') apiKey = getHfKey();
+      if (provider === 'openrouter') apiKey = getOpenrouterKey();
       
       const chunkExplanation = await explainFileChunk(repoFullName, filePath, chunks[idx], idx + 1, totalChunks, {
         provider, apiKey, model
@@ -226,12 +238,18 @@ export async function triggerFullExplanation(repoFullName, filePath, thisExplain
     if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
     if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
     if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+    if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+    if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+    if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
     
     let apiKey = '';
     if (provider === 'groq') apiKey = getGroqApiKey();
     if (provider === 'openai') apiKey = getOpenAiKey();
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
+    if (provider === 'grok') apiKey = getGrokKey();
+    if (provider === 'huggingface') apiKey = getHfKey();
+    if (provider === 'openrouter') apiKey = getOpenrouterKey();
     
     const finalSummary = await summarizeFullFile(repoFullName, filePath, partExplanations, {
       provider, apiKey, model
@@ -359,12 +377,18 @@ export async function handleFileSelect(filePath, node) {
     if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
     if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
     if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+    if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+    if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+    if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
     
     let apiKey = '';
     if (provider === 'groq') apiKey = getGroqApiKey();
     if (provider === 'openai') apiKey = getOpenAiKey();
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
+    if (provider === 'grok') apiKey = getGrokKey();
+    if (provider === 'huggingface') apiKey = getHfKey();
+    if (provider === 'openrouter') apiKey = getOpenrouterKey();
     
     const explanation = await explainFileCode(repoFullName, filePath, fileResult.content, {
       provider, apiKey, model
@@ -603,12 +627,18 @@ export async function handleDependencySelect(depName, version, badgeEl) {
     if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
     if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
     if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+    if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+    if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+    if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
     
     let apiKey = '';
     if (provider === 'groq') apiKey = getGroqApiKey();
     if (provider === 'openai') apiKey = getOpenAiKey();
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
+    if (provider === 'grok') apiKey = getGrokKey();
+    if (provider === 'huggingface') apiKey = getHfKey();
+    if (provider === 'openrouter') apiKey = getOpenrouterKey();
     
     const explanation = await explainDependency(repoFullName, depName, version, {
       provider, apiKey, model
@@ -942,12 +972,18 @@ export async function loadDeepDiveApiSpec(repoFullName, fileTree, token, default
     if (provider === 'openai') model = getOpenAiModel() || DEFAULT_MODELS.openai;
     if (provider === 'anthropic') model = getAnthropicModel() || DEFAULT_MODELS.anthropic;
     if (provider === 'gemini') model = getGeminiModel() || DEFAULT_MODELS.gemini;
+    if (provider === 'grok') model = getGrokModel() || DEFAULT_MODELS.grok;
+    if (provider === 'huggingface') model = getHfModel() || DEFAULT_MODELS.huggingface;
+    if (provider === 'openrouter') model = getOpenrouterModel() || DEFAULT_MODELS.openrouter;
     
     let apiKey = '';
     if (provider === 'groq') apiKey = getGroqApiKey();
     if (provider === 'openai') apiKey = getOpenAiKey();
     if (provider === 'anthropic') apiKey = getAnthropicKey();
     if (provider === 'gemini') apiKey = getGeminiKey();
+    if (provider === 'grok') apiKey = getGrokKey();
+    if (provider === 'huggingface') apiKey = getHfKey();
+    if (provider === 'openrouter') apiKey = getOpenrouterKey();
     
     const spec = await generateRouteSpec(repoFullName, routingFiles, { provider, apiKey, model });
     
