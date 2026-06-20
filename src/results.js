@@ -394,7 +394,7 @@ export function renderResults(repos, container) {
       return;
     }
 
-    const repo = state.lastSearchedRepos.find(r => r.id == repoId);
+    const repo = repos.find(r => r.id == repoId) || state.lastSearchedRepos.find(r => r.id == repoId);
     if (!repo) return;
 
     if (btn.dataset.action === 'like') {

@@ -395,6 +395,9 @@ function initResultsActions() {
       // Deep Dive
       const ddBtn = e.target.closest('[data-action="deep-dive"]');
       if (ddBtn) {
+        const repoFullName = ddBtn.dataset.repoName;
+        const repoId = Number(ddBtn.dataset.repoId);
+        
         const settingsOverlay = document.getElementById('settings-modal-overlay');
         if (settingsOverlay) settingsOverlay.classList.remove('open');
         const bookmarksOverlay = document.getElementById('bookmarks-modal-overlay');
